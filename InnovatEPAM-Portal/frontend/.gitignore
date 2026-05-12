@@ -1,0 +1,24 @@
+# Frontend dependencies & build
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+.test-results/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# tsc emit (should not happen with --noEmit)
+src/**/*.js
+src/**/*.js.map
+tests/**/*.js
+tests/**/*.js.map
+*.tsbuildinfo
