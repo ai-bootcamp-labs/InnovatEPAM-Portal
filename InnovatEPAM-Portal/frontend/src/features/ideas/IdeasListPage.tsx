@@ -1,25 +1,29 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useCategoriesQuery, useIdeasQuery } from '@/features/ideas/api';
-import type { IdeasFilter } from '@/features/ideas/api';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useIdeasQuery } from '@/features/ideas/api';
+import { IdeasFilters, useIdeasUrlState } from '@/features/ideas/IdeasFilters';
 import { StatusBadge } from '@/components/state/StatusBadge';
-import type { IdeaStatus } from '@/components/state/StatusBadge';
 import { LoadingState } from '@/components/state/LoadingState';
 import { ErrorState } from '@/components/state/ErrorState';
 import { EmptyState } from '@/components/state/EmptyState';
 import { formatIdeaDate } from '@/lib/date';
 
-const STATUS_OPTIONS: IdeaStatus[] = ['Submitted', 'UnderReview', 'Accepted', 'Rejected'];
-const PAGE_SIZE = 20;
-
-/** Idea list view (T075) — filterable + paginated. */
+/** Idea list view (T075, refactored in T097–T099). URL is the single source of truth. */
 export function IdeasListPage(): JSX.Element {
-  const categoriesQuery = useCategoriesQuery();
-  const [filter, setFilter] = useState<IdeasFilter>({});
-  const [page, setPage] = useState(1);
-  const ideasQuery = useIdeasQuery(filter, page, PAGE_SIZE);
+  const { filter, page, pageSize } = useIdeasUrlState();
+  const [params, setParams] = useSearchParams();
+  const ideasQuery = useIdeasQuery(filter, page, pageSize);
 
-  const totalPages = ideasQuery.data ? Math.max(1, Math.ceil(ideasQuery.data.total / PAGE_SIZE)) : 1;
+  const total = ideasQuery.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const filterDescription = describeFilter(filter);
+
+  function setPage(next: number) {
+    const clamped = Math.min(Math.max(1, next), totalPages);
+    const nextParams = new URLSearchParams(params);
+    if (clamped <= 1) nextParams.delete('page');
+    else nextParams.set('page', String(clamped));
+    setParams(nextParams, { replace: true });
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -36,48 +40,27 @@ export function IdeasListPage(): JSX.Element {
         </Link>
       </header>
 
-      <section className="mt-6 flex flex-wrap gap-3">
-        <select
-          value={filter.status ?? ''}
-          onChange={(e) => {
-            setPage(1);
-            setFilter((f) => ({ ...f, status: (e.target.value || undefined) as IdeaStatus | undefined }));
-          }}
-          className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-        >
-          <option value="">All statuses</option>
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+      <div className="mt-6">
+        <IdeasFilters />
+      </div>
 
-        <select
-          value={filter.categoryCode ?? ''}
-          onChange={(e) => {
-            setPage(1);
-            setFilter((f) => ({ ...f, categoryCode: e.target.value || undefined }));
-          }}
-          className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-          disabled={categoriesQuery.isLoading}
-        >
-          <option value="">All categories</option>
-          {(categoriesQuery.data ?? []).map((c) => (
-            <option key={c.id} value={c.code}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </section>
-
-      <section className="mt-6">
+      <section className="mt-6" aria-live="polite">
         {ideasQuery.isLoading ? (
           <LoadingState />
         ) : ideasQuery.isError ? (
-          <ErrorState message="Could not load ideas." onRetry={() => ideasQuery.refetch()} />
+          <ErrorState
+            message="Could not load ideas with the current filters."
+            onRetry={() => ideasQuery.refetch()}
+          />
         ) : !ideasQuery.data || ideasQuery.data.items.length === 0 ? (
-          <EmptyState title="No ideas yet" description="Be the first â€” submit a new idea." />
+          <EmptyState
+            title={`No ${filterDescription} ideas yet`}
+            description={
+              hasActiveFilter(filter)
+                ? 'Try widening your filters or submit a new idea.'
+                : 'Be the first — submit a new idea.'
+            }
+          />
         ) : (
           <>
             <div className="overflow-hidden rounded-md border border-border">
@@ -99,7 +82,13 @@ export function IdeasListPage(): JSX.Element {
                           {idea.title}
                         </Link>
                         {idea.hasAttachment ? (
-                          <span className="ml-2 text-xs text-muted-foreground">ðŸ“Ž</span>
+                          <span
+                            className="ml-2 text-xs text-muted-foreground"
+                            aria-label="Has attachment"
+                            title="Has attachment"
+                          >
+                            📎
+                          </span>
                         ) : null}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{idea.categoryName}</td>
@@ -116,30 +105,48 @@ export function IdeasListPage(): JSX.Element {
 
             <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
               <span>
-                Showing {(page - 1) * PAGE_SIZE + 1}â€“{Math.min(page * PAGE_SIZE, ideasQuery.data.total)} of {ideasQuery.data.total}
+                Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total}
               </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="rounded-md border border-border px-3 py-1 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                  className="rounded-md border border-border px-3 py-1 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
+              {total > pageSize ? (
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline">
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page <= 1}
+                    className="rounded-md border border-border px-3 py-1 disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= totalPages}
+                    className="rounded-md border border-border px-3 py-1 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : null}
             </div>
           </>
         )}
       </section>
     </main>
   );
+}
+
+function hasActiveFilter(filter: { status?: string; categoryCode?: string }): boolean {
+  return Boolean(filter.status) || Boolean(filter.categoryCode);
+}
+
+/** "No Rejected ideas yet" / "No Process ideas yet" / "No matching ideas yet". */
+function describeFilter(filter: { status?: string; categoryCode?: string }): string {
+  const parts: string[] = [];
+  if (filter.status) parts.push(filter.status);
+  if (filter.categoryCode) parts.push(filter.categoryCode);
+  if (parts.length === 0) return 'matching';
+  return parts.join(' / ');
 }

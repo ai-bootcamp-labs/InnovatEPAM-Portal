@@ -198,16 +198,16 @@ description: "Task list for Phase 1 MVP Ã¢â‚¬â€ InnovatEPAM Portal"
 ### Tests for User Story 3
 
 - [ ] T093 [P] [US3] Contract test `IdeasFilterAndPagingTests` in `backend/tests/InnovatEpam.Portal.IntegrationTests/Ideas/IdeasFilterAndPagingTests.cs`: seed 25 ideas across all statuses + 3 categories; assert `?status=Accepted&categoryCode=process` filters correctly; `?page=2&pageSize=10` returns the right slice with accurate `total`
-- [ ] T094 [P] [US3] Vitest component test `IdeasFilters.test.tsx` in `frontend/tests/unit/ideas/IdeasFilters.test.tsx`: changing filters updates the URL search params and triggers a refetch
+- [x] T094 [P] [US3] Vitest component test `IdeasFilters.test.tsx` in `frontend/tests/unit/ideas/IdeasFilters.test.tsx`: changing filters updates the URL search params and triggers a refetch
 - [ ] T095 [P] [US3] Playwright E2E `browse-filter.spec.ts` in `frontend/tests/e2e/browse-filter.spec.ts` covering M3.2, M3.3, M3.6, M3.7
 
 ### Implementation
 
-- [ ] T096 [US3] Extend `IdeaService.ListAsync` to support `status`, `categoryCode`, `submitterId`, `sort` (default `-createdAt`), `page`, `pageSize` Ã¢â€°Â¤ 100; ensure index `ix_idea_status_created_at` is used (data-model Ã‚Â§4) (depends on T063)
-- [ ] T097 [P] [US3] Build `IdeasFilters` component in `frontend/src/features/ideas/IdeasFilters.tsx` using shadcn `Select` for status and category; bind filter state to URL search params via `useSearchParams` so filters are deep-linkable (M3.2)
-- [ ] T098 [US3] Add pagination controls (`PreviousPage`/`NextPage` + page size) to `IdeasListPage`; render only when `total > pageSize`; show total count summary (depends on T075, T097)
-- [ ] T099 [US3] Wire `IdeasListPage` empty-state copy to filter context (e.g., "No Rejected ideas yet") and ensure error-state retry refetches the current filter (depends on T044, T075)
-- [ ] T100 [US3] Add `useIdeaQuery(id)` and finalize `IdeaDetailPage` to render the full `IdeaDetail` (description, attachment download, full status history) for any signed-in user (depends on T076, T091)
+- [x] T096 [US3] Extend `IdeaService.ListAsync` to support `status`, `categoryCode`, `submitterId`, `sort` (default `-createdAt`), `page`, `pageSize` Ã¢â€°Â¤ 100; ensure index `ix_idea_status_created_at` is used (data-model Ã‚Â§4) (depends on T063)
+- [x] T097 [P] [US3] Build `IdeasFilters` component in `frontend/src/features/ideas/IdeasFilters.tsx` using shadcn `Select` for status and category; bind filter state to URL search params via `useSearchParams` so filters are deep-linkable (M3.2)
+- [x] T098 [US3] Add pagination controls (`PreviousPage`/`NextPage` + page size) to `IdeasListPage`; render only when `total > pageSize`; show total count summary (depends on T075, T097)
+- [x] T099 [US3] Wire `IdeasListPage` empty-state copy to filter context (e.g., "No Rejected ideas yet") and ensure error-state retry refetches the current filter (depends on T044, T075)
+- [x] T100 [US3] Add `useIdeaQuery(id)` and finalize `IdeaDetailPage` to render the full `IdeaDetail` (description, attachment download, full status history) for any signed-in user (depends on T076, T091)
 
 **Checkpoint**: Run checklist M3. All three user stories independently testable.
 
