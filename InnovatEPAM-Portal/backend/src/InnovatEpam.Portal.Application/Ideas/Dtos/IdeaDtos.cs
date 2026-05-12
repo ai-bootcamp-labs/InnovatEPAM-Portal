@@ -13,7 +13,7 @@ public sealed record IdeaListItem(
     string CategoryName,
     IdeaStatus Status,
     Guid SubmitterId,
-    string SubmitterDisplayName,
+    string SubmitterName,
     bool HasAttachment,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
@@ -27,11 +27,11 @@ public sealed record IdeaDetail(
     string CategoryName,
     IdeaStatus Status,
     Guid SubmitterId,
-    string SubmitterDisplayName,
+    string SubmitterName,
     AttachmentSummary? Attachment,
     string? LastDecisionComment,
     Guid? LastDecisionById,
-    string? LastDecisionByDisplayName,
+    string? LastDecisionByName,
     DateTimeOffset? LastDecisionAt,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
