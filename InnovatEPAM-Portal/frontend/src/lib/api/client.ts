@@ -8,7 +8,7 @@
  * - Surfaces RFC 7807 ProblemDetails responses as typed `ApiError`s.
  */
 
-const DEFAULT_BASE_URL = 'http://localhost:5000/api/v1';
+const DEFAULT_BASE_URL = 'http://localhost:5222/api/v1';
 const TOKEN_STORAGE_KEY = 'innovatepam.auth.v1';
 
 export interface ProblemDetails {
