@@ -209,9 +209,14 @@ paths:
         name: id
         required: true
         schema: { type: string, format: uuid }
-    post:
+    put:
       tags: [Attachments]
-      summary: Attach a file to an idea (replaces if one already exists)
+      summary: Create or replace the singleton attachment of an idea (idempotent)
+      description: |
+        Idempotent create-or-replace of the at-most-one attachment per idea
+        (Constitution Principle II). Returns 201 on first creation and 200
+        when an existing attachment is replaced. Only the original submitter
+        or an Admin may invoke.
       requestBody:
         required: true
         content:
@@ -224,12 +229,18 @@ paths:
                   type: string
                   format: binary
       responses:
+        '200':
+          description: Replaced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttachmentSummary' }
         '201':
-          description: Attached
+          description: Created
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AttachmentSummary' }
         '400': { $ref: '#/components/responses/Validation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '413':
           description: Payload too large (> 10 MB)

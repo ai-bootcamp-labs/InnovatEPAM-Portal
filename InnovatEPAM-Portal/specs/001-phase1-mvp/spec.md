@@ -248,7 +248,8 @@ status history.
   first attempt under nominal load (100 concurrent users).
 - **SC-004**: 100 % of accept/reject decisions made through the Admin UI
   produce a status change, a stored comment, and a corresponding audit-trail
-  entry visible to the submitter within 2 seconds.
+  entry visible to the submitter within 30 seconds (bounded by the in-portal
+  notification poll interval defined in research R14).
 - **SC-005**: 0 % of Submitter-role accounts can successfully invoke
   Admin-only actions in penetration tests of role enforcement.
 - **SC-006**: 90 % of test users in usability evaluation complete their
