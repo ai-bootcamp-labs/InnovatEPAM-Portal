@@ -45,9 +45,21 @@ public sealed class DecisionService
 
         // Pessimistic row lock — second concurrent admin blocks until the first
         // commits, then re-reads the up-to-date status (FR-020).
+        //
+        // Notes:
+        //  • `xmin` is a PostgreSQL system column and is NOT included by `select *`.
+        //    Because IdeaConfiguration maps RowVersion → xmin (xid), the row must
+        //    be projected explicitly or EF's materializer fails the request.
+        //  • AsNoTracking is intentional: the AFTER-INSERT trigger
+        //    `trg_decision_after_insert` is the single writer for ideas.status,
+        //    last_decision_id, updated_at, and the idea_status_history row.
+        //    Tracking the entity here would cause EF to also UPDATE ideas, racing
+        //    the trigger and producing spurious DbUpdateConcurrencyException 409s.
+        //    The C# TransitionTo(...) call below stays purely as a validation
+        //    gate that surfaces terminal-status / no-op transitions as 409.
         var idea = await _db.Ideas
-            .FromSqlInterpolated($"select * from portal.ideas where id = {ideaId} for update")
-            .AsTracking()
+            .FromSqlInterpolated($"select *, xmin from portal.ideas where id = {ideaId} for update")
+            .AsNoTracking()
             .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Idea not found.");
 
@@ -64,8 +76,6 @@ public sealed class DecisionService
         }
 
         var decision = Decision.Create(idea.Id, request.Action, request.Comment, adminId, DateTimeOffset.UtcNow);
-        idea.AssignLastDecision(decision.Id);
-        idea.UpdatedAt = decision.DecidedAt;
         _db.Decisions.Add(decision);
 
         // T102 — emit an in-portal notification for the submitter inside the

@@ -23,6 +23,9 @@ public sealed class FileSystemAttachmentStorage : IAttachmentStorage
     {
         ArgumentNullException.ThrowIfNull(options);
         _rootPath = Path.GetFullPath(options.Value.RootPath);
+        // Materialize the root at startup so a misconfigured working directory
+        // surfaces immediately rather than on the first upload.
+        Directory.CreateDirectory(_rootPath);
     }
 
     public async Task<string> SaveAsync(
