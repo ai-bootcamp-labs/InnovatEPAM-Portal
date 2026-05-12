@@ -1,8 +1,8 @@
 using InnovatEpam.Portal.Domain.Attachments;
 using InnovatEpam.Portal.Domain.Categories;
 using InnovatEpam.Portal.Domain.Decisions;
-using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Domain.Ideas;
+using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Domain.Notifications;
 using InnovatEpam.Portal.Domain.Outbox;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
