@@ -53,7 +53,15 @@ public sealed class DecisionService
 
         // Throws ConflictException on illegal transitions (terminal status, no-op).
         var fromStatus = idea.Status;
-        idea.TransitionTo(nextStatus, request.Action);
+        try
+        {
+            idea.TransitionTo(nextStatus, request.Action);
+        }
+        catch (ConflictException)
+        {
+            _logger.LogWarning("decision.conflict {IdeaId} {AdminId}", ideaId, adminId);
+            throw;
+        }
 
         var decision = Decision.Create(idea.Id, request.Action, request.Comment, adminId, DateTimeOffset.UtcNow);
         idea.AssignLastDecision(decision.Id);

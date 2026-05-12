@@ -40,7 +40,15 @@ public sealed class AuthController : ControllerBase
     /// <summary>Logs out the current session. Phase 1 is stateless — clients drop the JWT.</summary>
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public IActionResult Logout() => NoContent();
+    public async Task<IActionResult> Logout(CancellationToken ct)
+    {
+        var sub = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (Guid.TryParse(sub, out var userId))
+        {
+            await _auth.LogoutAsync(userId, ct);
+        }
+        return NoContent();
+    }
 
     /// <summary>Returns the authenticated user's profile.</summary>
     [HttpGet("me")]

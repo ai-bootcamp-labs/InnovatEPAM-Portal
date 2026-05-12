@@ -98,6 +98,17 @@ public sealed class AuthService
         return new UserSummary(user.Id, user.Email ?? string.Empty, user.DisplayName, roleName);
     }
 
+    /// <summary>
+    /// Records a structured <c>auth.logout</c> event (T113a). Phase 1 sessions are
+    /// stateless JWTs so there is no server-side state to invalidate; the log entry
+    /// is the audit trail.
+    /// </summary>
+    public Task LogoutAsync(Guid userId, CancellationToken ct)
+    {
+        _logger.LogInformation("auth.logout {UserId}", userId);
+        return Task.CompletedTask;
+    }
+
     private Task<AuthResponse> IssueAsync(AppUser user, string roleName)
     {
         var (token, expiresAt) = _tokenIssuer.CreateAccessToken(user, roleName);

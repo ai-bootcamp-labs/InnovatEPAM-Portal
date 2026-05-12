@@ -4,6 +4,7 @@ using InnovatEpam.Portal.Api.Auth;
 using InnovatEpam.Portal.Api.Conventions;
 using InnovatEpam.Portal.Api.Cors;
 using InnovatEpam.Portal.Api.ErrorHandling;
+using InnovatEpam.Portal.Api.Logging;
 using InnovatEpam.Portal.Application.Attachments;
 using InnovatEpam.Portal.Application.Auth;
 using InnovatEpam.Portal.Application.Decisions;
@@ -13,6 +14,7 @@ using InnovatEpam.Portal.Application.Storage;
 using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Infrastructure.Persistence;
 using InnovatEpam.Portal.Infrastructure.Persistence.Interceptors;
+using InnovatEpam.Portal.Infrastructure.Seeding;
 using InnovatEpam.Portal.Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -32,6 +34,7 @@ builder.Host.UseSerilog((context, services, configuration) =>
     configuration
         .ReadFrom.Configuration(context.Configuration)
         .ReadFrom.Services(services)
+        .Destructure.With<SensitivePropertyScrubbingPolicy>()
         .Enrich.FromLogContext()
         .Enrich.WithProperty("Application", "InnovatEpam.Portal.Api")
         .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -137,6 +140,14 @@ builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<DecisionService>();
 builder.Services.AddScoped<InnovatEpam.Portal.Application.Notifications.NotificationService>();
 
+// ─── Health checks (T108) ────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionStringFactory: sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("Postgres")
+            ?? throw new InvalidOperationException("ConnectionStrings:Postgres is not configured."),
+        name: "postgres",
+        tags: new[] { "db", "ready" });
+
 // ─── CORS (T029) ─────────────────────────────────────────────────────────────
 builder.Services
     .AddOptions<CorsOptions>()
@@ -215,7 +226,17 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // ─── Pipeline ────────────────────────────────────────────────────────────────
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestId", httpContext.TraceIdentifier);
+        var userId = httpContext.User?.FindFirst("sub")?.Value
+            ?? httpContext.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userId)) diagnosticContext.Set("UserId", userId);
+        diagnosticContext.Set("Endpoint", httpContext.GetEndpoint()?.DisplayName);
+    };
+});
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
@@ -240,7 +261,23 @@ app.MapGet("/api/v1/health", () => Results.Ok(new { status = "ok" }))
    .AllowAnonymous()
    .WithName("Health");
 
+app.MapHealthChecks("/api/v1/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+}).AllowAnonymous();
+
+app.MapHealthChecks("/api/v1/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false,
+}).AllowAnonymous();
+
 app.MapControllers();
+
+// ─── Admin seeding (T107) ───────────────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    await AdminUserSeeder.SeedAsync(scope.ServiceProvider);
+}
 
 app.Run();
 

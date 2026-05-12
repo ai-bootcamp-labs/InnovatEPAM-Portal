@@ -24,6 +24,31 @@ module.exports = {
   },
   overrides: [
     {
+      files: ['src/**/*.{ts,tsx}'],
+      excludedFiles: ['src/lib/date.ts'],
+      rules: {
+        // T110 — formatting must go through src/lib/date.ts so locale + tokens
+        // stay consistent with the spec (formatIdeaDate / formatIdeaDateTime /
+        // formatRelative). Direct Intl/Date string conversions bypass the
+        // helper and produce locale-dependent output.
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector: "CallExpression[callee.property.name='toLocaleDateString']",
+            message: 'Use formatIdeaDate / formatIdeaDateTime from @/lib/date instead of toLocaleDateString.',
+          },
+          {
+            selector: "CallExpression[callee.property.name='toLocaleString']",
+            message: 'Use formatIdeaDateTime from @/lib/date instead of toLocaleString.',
+          },
+          {
+            selector: "CallExpression[callee.property.name='toLocaleTimeString']",
+            message: 'Use formatIdeaDateTime from @/lib/date instead of toLocaleTimeString.',
+          },
+        ],
+      },
+    },
+    {
       files: ['tests/**/*.{ts,tsx}'],
       rules: {
         '@typescript-eslint/no-explicit-any': 'off',

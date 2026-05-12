@@ -33,6 +33,7 @@
     <ProjectReference Include="..\..\src\InnovatEpam.Portal.Application\InnovatEpam.Portal.Application.csproj" />
     <ProjectReference Include="..\..\src\InnovatEpam.Portal.Domain\InnovatEpam.Portal.Domain.csproj" />
     <ProjectReference Include="..\..\src\InnovatEpam.Portal.Infrastructure\InnovatEpam.Portal.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\InnovatEpam.Portal.Api\InnovatEpam.Portal.Api.csproj" />
   </ItemGroup>
 
 </Project>
