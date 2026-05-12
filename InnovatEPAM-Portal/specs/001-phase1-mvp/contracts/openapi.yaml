@@ -1,0 +1,558 @@
+openapi: 3.0.3
+info:
+  title: InnovatEPAM Portal API
+  description: |
+    REST API for the InnovatEPAM Portal — Phase 1 MVP.
+
+    Conventions (from project constitution v1.0.0):
+      * All endpoints are versioned via the `/api/v1/` prefix.
+      * Resources are plural nouns; verbs are not used in paths.
+      * Errors follow RFC 7807 (`application/problem+json`).
+      * Pagination uses `page` (1-based) and `pageSize`; list responses include `total`.
+      * All endpoints except `/auth/register`, `/auth/login`, and `/health`
+        require a `Bearer` JWT.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: Versioned API root
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Auth
+  - name: Ideas
+  - name: Decisions
+  - name: Attachments
+  - name: Categories
+  - name: Notifications
+  - name: Health
+
+paths:
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new Submitter account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Account created and authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/Validation' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate and receive a JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/Validation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Invalidate the current session (server-side bookkeeping)
+      responses:
+        '204': { description: Logged out }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Return the current user
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /categories:
+    get:
+      tags: [Categories]
+      summary: List active categories (closed Phase 1 list)
+      responses:
+        '200':
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
+
+  /ideas:
+    get:
+      tags: [Ideas]
+      summary: List ideas (paginated, filterable)
+      parameters:
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/IdeaStatus' }
+        - in: query
+          name: categoryCode
+          schema: { type: string }
+        - in: query
+          name: submitterId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: sort
+          description: Comma-separated. Allowed fields, optional `-` for desc.
+          schema: { type: string, default: '-createdAt', example: '-createdAt' }
+      responses:
+        '200':
+          description: Paged list of ideas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedIdeas' }
+        '400': { $ref: '#/components/responses/Validation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    post:
+      tags: [Ideas]
+      summary: Submit a new idea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateIdeaRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IdeaDetail' }
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+        '400': { $ref: '#/components/responses/Validation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /ideas/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Ideas]
+      summary: Get an idea by id
+      responses:
+        '200':
+          description: Idea detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IdeaDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /ideas/{id}/history:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Ideas]
+      summary: Get the audit trail for an idea
+      responses:
+        '200':
+          description: Status history (oldest first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StatusHistoryEntry' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /ideas/{id}/attachment:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Attachments]
+      summary: Attach a file to an idea (replaces if one already exists)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Attached
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttachmentSummary' }
+        '400': { $ref: '#/components/responses/Validation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413':
+          description: Payload too large (> 10 MB)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '415':
+          description: Unsupported file type
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+    get:
+      tags: [Attachments]
+      summary: Download the attachment of an idea
+      responses:
+        '200':
+          description: File bytes
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    delete:
+      tags: [Attachments]
+      summary: Remove the attachment of an idea (submitter or admin)
+      responses:
+        '204': { description: Removed }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /ideas/{id}/decisions:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Decisions]
+      summary: Record an admin decision (Move to Under Review / Accept / Reject)
+      description: |
+        Requires the **Admin** role. Comment is mandatory for Accept and Reject
+        (1–2 000 chars). The endpoint is idempotent on `(ideaId, action,
+        decidedBy, body-hash)` — a duplicate POST returns the existing decision.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDecisionRequest' }
+      responses:
+        '201':
+          description: Decision recorded; idea status updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IdeaDetail' }
+        '400': { $ref: '#/components/responses/Validation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            Idea is already in a terminal state OR a concurrent decision was
+            recorded by another admin (optimistic concurrency).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications for the current user (most recent first)
+      parameters:
+        - in: query
+          name: unreadOnly
+          schema: { type: boolean, default: false }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: pageSize
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Paged notifications
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PagedNotifications' }
+
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Cheap unread count (polled every 30 s by the SPA)
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [unread]
+                properties:
+                  unread: { type: integer, minimum: 0 }
+
+  /notifications/{id}/read:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Notifications]
+      summary: Mark a single notification as read
+      responses:
+        '204': { description: Marked }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Validation:
+      description: Validation failed
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ValidationProblem' }
+    Unauthorized:
+      description: Authentication required or invalid
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Authenticated but not allowed
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Conflicts with current state
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, example: ok }
+        version: { type: string, example: 1.0.0 }
+
+    IdeaStatus:
+      type: string
+      enum: [Submitted, UnderReview, Accepted, Rejected]
+
+    Role:
+      type: string
+      enum: [Submitter, Admin]
+
+    Category:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:   { type: string, format: uuid }
+        code: { type: string, example: technology }
+        name: { type: string, example: Technology }
+
+    UserSummary:
+      type: object
+      required: [id, displayName, email, role]
+      properties:
+        id:          { type: string, format: uuid }
+        displayName: { type: string }
+        email:       { type: string, format: email }
+        role:        { $ref: '#/components/schemas/Role' }
+
+    RegisterRequest:
+      type: object
+      required: [displayName, email, password]
+      properties:
+        displayName: { type: string, minLength: 2, maxLength: 120 }
+        email:       { type: string, format: email, maxLength: 256 }
+        password:    { type: string, minLength: 8, maxLength: 256 }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email }
+        password: { type: string }
+
+    AuthResponse:
+      type: object
+      required: [accessToken, expiresAt, user]
+      properties:
+        accessToken: { type: string, description: JWT bearer token }
+        expiresAt:   { type: string, format: date-time }
+        user:        { $ref: '#/components/schemas/UserSummary' }
+
+    AttachmentSummary:
+      type: object
+      required: [id, fileName, contentType, sizeBytes, uploadedAt, downloadUrl]
+      properties:
+        id:           { type: string, format: uuid }
+        fileName:     { type: string }
+        contentType:  { type: string }
+        sizeBytes:    { type: integer, format: int64 }
+        uploadedAt:   { type: string, format: date-time }
+        downloadUrl:  { type: string, format: uri }
+
+    CreateIdeaRequest:
+      type: object
+      required: [title, description, categoryCode]
+      properties:
+        title:        { type: string, minLength: 5, maxLength: 120 }
+        description:  { type: string, minLength: 1, maxLength: 4000 }
+        categoryCode: { type: string }
+
+    IdeaListItem:
+      type: object
+      required: [id, title, categoryCode, categoryName, submitterDisplayName, status, createdAt, hasAttachment]
+      properties:
+        id:                   { type: string, format: uuid }
+        title:                { type: string }
+        categoryCode:         { type: string }
+        categoryName:         { type: string }
+        submitterId:          { type: string, format: uuid }
+        submitterDisplayName: { type: string }
+        status:               { $ref: '#/components/schemas/IdeaStatus' }
+        createdAt:            { type: string, format: date-time }
+        updatedAt:            { type: string, format: date-time }
+        hasAttachment:        { type: boolean }
+
+    IdeaDetail:
+      allOf:
+        - $ref: '#/components/schemas/IdeaListItem'
+        - type: object
+          required: [description]
+          properties:
+            description:        { type: string }
+            attachment:         { $ref: '#/components/schemas/AttachmentSummary', nullable: true }
+            lastDecisionComment:{ type: string, nullable: true }
+            lastDecisionBy:     { $ref: '#/components/schemas/UserSummary', nullable: true }
+            lastDecisionAt:     { type: string, format: date-time, nullable: true }
+
+    PagedIdeas:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:    { type: array, items: { $ref: '#/components/schemas/IdeaListItem' } }
+        page:     { type: integer }
+        pageSize: { type: integer }
+        total:    { type: integer }
+
+    StatusHistoryEntry:
+      type: object
+      required: [id, toStatus, actorId, actorDisplayName, occurredAt]
+      properties:
+        id:                { type: string, format: uuid }
+        fromStatus:        { allOf: [ { $ref: '#/components/schemas/IdeaStatus' } ], nullable: true }
+        toStatus:          { $ref: '#/components/schemas/IdeaStatus' }
+        actorId:           { type: string, format: uuid }
+        actorDisplayName:  { type: string }
+        comment:           { type: string, nullable: true }
+        occurredAt:        { type: string, format: date-time }
+
+    CreateDecisionRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [MoveToUnderReview, Accept, Reject]
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Required when action is Accept or Reject.
+
+    Notification:
+      type: object
+      required: [id, kind, payload, createdAt]
+      properties:
+        id:        { type: string, format: uuid }
+        kind:      { type: string }
+        ideaId:    { type: string, format: uuid, nullable: true }
+        payload:   { type: object, additionalProperties: true }
+        readAt:    { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    PagedNotifications:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:    { type: array, items: { $ref: '#/components/schemas/Notification' } }
+        page:     { type: integer }
+        pageSize: { type: integer }
+        total:    { type: integer }
+
+    Problem:
+      type: object
+      description: RFC 7807 problem details
+      properties:
+        type:     { type: string, format: uri }
+        title:    { type: string }
+        status:   { type: integer }
+        detail:   { type: string }
+        instance: { type: string }
+
+    ValidationProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items: { type: string }
