@@ -217,12 +217,12 @@ description: "Task list for Phase 1 MVP Ã¢â‚¬â€ InnovatEPAM Portal"
 
 **Purpose**: Implement FR-022 (in-portal notification on status change) discovered in research R14 and tested by M2.10.
 
-- [ ] T101 [P] Create `Notification` entity in `backend/src/InnovatEpam.Portal.Domain/Notifications/Notification.cs` per data-model Ã‚Â§8; EF configuration adds the partial unread index
-- [ ] T102 In `DecisionService.RecordAsync` (T085), within the same `SaveChangesAsync` transaction, insert a `Notification` row for the idea's submitter with `kind = 'idea_status_changed'` and a payload containing `{ ideaId, ideaTitle, fromStatus, toStatus, decidedBy }`
-- [ ] T103 [P] Implement `NotificationsController` in `backend/src/InnovatEpam.Portal.Api/Controllers/NotificationsController.cs` with `GET /api/v1/notifications`, `GET /api/v1/notifications/unread-count`, `POST /api/v1/notifications/{id}/read`
-- [ ] T104 [P] Backend test `NotificationsTests` in `backend/tests/InnovatEpam.Portal.IntegrationTests/Notifications/NotificationsTests.cs`: a decision creates exactly one unread notification for the submitter; mark-read endpoint sets `read_at`; unread count drops accordingly
-- [ ] T105 [P] Build `useUnreadCount` polling hook in `frontend/src/features/notifications/useUnreadCount.ts` using TanStack Query with `refetchInterval: 30_000` and `refetchOnWindowFocus: true`
-- [ ] T106 [P] Build `NotificationsPanel` in `frontend/src/features/notifications/NotificationsPanel.tsx` (shadcn `Sheet` triggered by the bell icon in `AppShell`); list items use `formatRelative` for timestamps; clicking an item navigates to the idea and marks the notification read
+- [x] T101 [P] Create `Notification` entity in `backend/src/InnovatEpam.Portal.Domain/Notifications/Notification.cs` per data-model Ã‚Â§8; EF configuration adds the partial unread index
+- [x] T102 In `DecisionService.RecordAsync` (T085), within the same `SaveChangesAsync` transaction, insert a `Notification` row for the idea's submitter with `kind = 'idea_status_changed'` and a payload containing `{ ideaId, ideaTitle, fromStatus, toStatus, decidedBy }`
+- [x] T103 [P] Implement `NotificationsController` in `backend/src/InnovatEpam.Portal.Api/Controllers/NotificationsController.cs` with `GET /api/v1/notifications`, `GET /api/v1/notifications/unread-count`, `POST /api/v1/notifications/{id}/read`
+- [x] T104 [P] Backend test `NotificationsTests` in `backend/tests/InnovatEpam.Portal.IntegrationTests/Notifications/NotificationsTests.cs`: a decision creates exactly one unread notification for the submitter; mark-read endpoint sets `read_at`; unread count drops accordingly
+- [x] T105 [P] Build `useUnreadCount` polling hook in `frontend/src/features/notifications/useUnreadCount.ts` using TanStack Query with `refetchInterval: 30_000` and `refetchOnWindowFocus: true`
+- [x] T106 [P] Build `NotificationsPanel` in `frontend/src/features/notifications/NotificationsPanel.tsx` (shadcn `Sheet` triggered by the bell icon in `AppShell`); list items use `formatRelative` for timestamps; clicking an item navigates to the idea and marks the notification read
 
 ---
 

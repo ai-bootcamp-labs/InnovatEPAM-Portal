@@ -135,6 +135,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IdeaService>();
 builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<DecisionService>();
+builder.Services.AddScoped<InnovatEpam.Portal.Application.Notifications.NotificationService>();
 
 // ─── CORS (T029) ─────────────────────────────────────────────────────────────
 builder.Services

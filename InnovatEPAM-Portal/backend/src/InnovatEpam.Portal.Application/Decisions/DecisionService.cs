@@ -1,3 +1,4 @@
+using System.Text.Json;
 using InnovatEpam.Portal.Application.Decisions.Dtos;
 using InnovatEpam.Portal.Application.Ideas;
 using InnovatEpam.Portal.Application.Ideas.Dtos;
@@ -6,6 +7,7 @@ using InnovatEpam.Portal.Domain.Decisions;
 using InnovatEpam.Portal.Domain.Enums;
 using InnovatEpam.Portal.Domain.Exceptions;
 using InnovatEpam.Portal.Domain.Ideas;
+using InnovatEpam.Portal.Domain.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -50,12 +52,36 @@ public sealed class DecisionService
             ?? throw new NotFoundException("Idea not found.");
 
         // Throws ConflictException on illegal transitions (terminal status, no-op).
+        var fromStatus = idea.Status;
         idea.TransitionTo(nextStatus, request.Action);
 
         var decision = Decision.Create(idea.Id, request.Action, request.Comment, adminId, DateTimeOffset.UtcNow);
         idea.AssignLastDecision(decision.Id);
         idea.UpdatedAt = decision.DecidedAt;
         _db.Decisions.Add(decision);
+
+        // T102 — emit an in-portal notification for the submitter inside the
+        // same transaction so the unread count reflects reality immediately.
+        var actor = await _db.Users.AsNoTracking()
+            .Where(u => u.Id == adminId)
+            .Select(u => new { u.DisplayName })
+            .FirstOrDefaultAsync(ct);
+        var payload = JsonSerializer.Serialize(new
+        {
+            ideaId = idea.Id,
+            ideaTitle = idea.Title,
+            fromStatus = fromStatus.ToString(),
+            toStatus = nextStatus.ToString(),
+            decidedById = adminId,
+            decidedByDisplayName = actor?.DisplayName ?? string.Empty,
+        });
+        var notification = Notification.Create(
+            recipientId: idea.SubmitterId,
+            ideaId: idea.Id,
+            kind: Notification.KindIdeaStatusChanged,
+            payloadJson: payload,
+            createdAt: decision.DecidedAt);
+        _db.Notifications.Add(notification);
 
         try
         {
