@@ -25,11 +25,13 @@ vi.mock('react-router-dom', async () => {
 
 function wrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={qc}>
       <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   );
+  Wrapper.displayName = 'NotificationsTestWrapper';
+  return Wrapper;
 }
 
 beforeEach(() => {

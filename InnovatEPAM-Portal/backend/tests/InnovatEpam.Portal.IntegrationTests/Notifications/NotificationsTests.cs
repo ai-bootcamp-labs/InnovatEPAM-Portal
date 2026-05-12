@@ -1,14 +1,14 @@
+using FluentAssertions;
 using InnovatEpam.Portal.Application.Decisions;
 using InnovatEpam.Portal.Application.Decisions.Dtos;
 using InnovatEpam.Portal.Application.Notifications;
 using InnovatEpam.Portal.Application.Persistence;
 using InnovatEpam.Portal.Domain.Categories;
 using InnovatEpam.Portal.Domain.Enums;
-using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Domain.Ideas;
+using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Domain.Notifications;
 using InnovatEpam.Portal.Infrastructure.Persistence;
-using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
