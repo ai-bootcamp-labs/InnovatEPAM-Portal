@@ -53,14 +53,22 @@ public sealed class IdeaService
         return detail ?? throw new NotFoundException("Idea not found.");
     }
 
-    /// <summary>Listing with filtering + pagination (FR-013, FR-014, US3 entry-point).</summary>
+    /// <summary>
+    /// Listing with filtering + pagination (FR-013, FR-014, US3 entry-point, T096).
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="sort"/> accepts <c>createdAt</c>, <c>-createdAt</c> (default),
+    /// <c>updatedAt</c>, <c>-updatedAt</c>, <c>title</c>, <c>-title</c>. Unknown values
+    /// fall back to the default to keep the index <c>ix_idea_status_created_at</c> hot.
+    /// </remarks>
     public async Task<PagedIdeas> ListAsync(
         IdeaStatus? status,
         string? categoryCode,
         Guid? submitterId,
         int page,
         int pageSize,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? sort = null)
     {
         page = page < 1 ? 1 : page;
         pageSize = pageSize switch { < 1 => 10, > 100 => 100, _ => pageSize };
@@ -76,8 +84,9 @@ public sealed class IdeaService
 
         var total = await query.CountAsync(ct);
 
-        var slice = query
-            .OrderByDescending(i => i.CreatedAt)
+        var ordered = ApplySort(query, sort);
+
+        var slice = ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize);
 
@@ -100,6 +109,16 @@ public sealed class IdeaService
 
         return new PagedIdeas(items, total, page, pageSize);
     }
+
+    private static IQueryable<Idea> ApplySort(IQueryable<Idea> query, string? sort) => sort switch
+    {
+        "createdAt" => query.OrderBy(i => i.CreatedAt),
+        "updatedAt" => query.OrderBy(i => i.UpdatedAt),
+        "-updatedAt" => query.OrderByDescending(i => i.UpdatedAt),
+        "title" => query.OrderBy(i => i.Title),
+        "-title" => query.OrderByDescending(i => i.Title),
+        _ => query.OrderByDescending(i => i.CreatedAt),
+    };
 
     private IQueryable<IdeaDetail> BuildDetailQuery(IQueryable<Idea> ideas) =>
         from i in ideas

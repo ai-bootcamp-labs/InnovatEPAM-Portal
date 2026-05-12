@@ -24,8 +24,9 @@ public sealed class IdeasController : ControllerBase
         [FromQuery] Guid? submitterId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? sort = null,
         CancellationToken ct = default) =>
-        _ideas.ListAsync(status, categoryCode, submitterId, page, pageSize, ct);
+        _ideas.ListAsync(status, categoryCode, submitterId, page, pageSize, ct, sort);
 
     /// <summary>Returns the full detail projection for a single idea.</summary>
     [HttpGet("{id:guid}")]

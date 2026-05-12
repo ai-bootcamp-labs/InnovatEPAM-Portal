@@ -64,10 +64,13 @@ export interface CreateIdeaPayload {
   categoryId: string;
 }
 
+export type IdeaSort = 'createdAt' | '-createdAt' | 'updatedAt' | '-updatedAt' | 'title' | '-title';
+
 export interface IdeasFilter {
   status?: IdeaStatus;
   categoryCode?: string;
   submitterId?: string;
+  sort?: IdeaSort;
 }
 
 /** ─── Query keys ──────────────────────────────────────────────────────── */
@@ -97,11 +100,13 @@ export function useIdeasQuery(filter: IdeasFilter, page: number, pageSize: numbe
   if (filter.status) qs.set('status', filter.status);
   if (filter.categoryCode) qs.set('categoryCode', filter.categoryCode);
   if (filter.submitterId) qs.set('submitterId', filter.submitterId);
+  if (filter.sort) qs.set('sort', filter.sort);
   qs.set('page', String(page));
   qs.set('pageSize', String(pageSize));
   return useQuery<PagedIdeas>({
     queryKey: ideasKeys.list(filter, page, pageSize),
     queryFn: ({ signal }) => apiClient.get<PagedIdeas>(`/ideas?${qs.toString()}`, signal),
+    placeholderData: (prev) => prev,
   });
 }
 
