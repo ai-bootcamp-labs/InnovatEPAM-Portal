@@ -1,50 +1,211 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+==================
+Version change: 0.0.0 (template) → 1.0.0
+Bump rationale: MAJOR — initial ratification of the project constitution; replaces
+unfilled template placeholders with concrete, governing principles.
+
+Modified principles:
+  - [PRINCIPLE_1_NAME] → I. Clean Code & Maintainability
+  - [PRINCIPLE_2_NAME] → II. RESTful API Design
+  - [PRINCIPLE_3_NAME] → III. Simple & Responsive UI/UX
+  - [PRINCIPLE_4_NAME] → IV. Minimal Dependencies
+  - [PRINCIPLE_5_NAME] → REMOVED (user specified four principles only)
+
+Added sections:
+  - Technology Stack & Constraints (Section 2)
+  - Development Workflow & Quality Gates (Section 3)
+
+Removed sections:
+  - Placeholder Principle 5 (intentionally omitted per scope)
+
+Templates requiring updates:
+  - ✅ .specify/templates/plan-template.md — Constitution Check gate is generic
+    and references this file by lookup; no edits required.
+  - ✅ .specify/templates/spec-template.md — No constitution-specific clauses;
+    no edits required.
+  - ✅ .specify/templates/tasks-template.md — Task categories remain compatible
+    with new principles; no edits required.
+  - ✅ .github/prompts/speckit.constitution.prompt.md — Generic; no edits required.
+
+Follow-up TODOs:
+  - None. RATIFICATION_DATE recorded as today (initial adoption).
+-->
+
+# InnovatEPAM Portal Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Clean Code & Maintainability
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Code MUST be self-explanatory, consistently formatted, and free of dead code.
+Every change MUST follow these non-negotiable rules:
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+- Names MUST reveal intent; abbreviations are forbidden except for well-known
+  terms (e.g., `Id`, `Url`, `Db`).
+- Functions MUST do one thing; cyclomatic complexity SHOULD stay below 10.
+- Backend code MUST conform to the .NET runtime style (`dotnet format`) and
+  treat compiler warnings as errors. Frontend code MUST pass `eslint` and
+  `prettier` with zero warnings.
+- Public types and endpoints MUST carry XML doc comments (backend) or JSDoc /
+  TypeScript type annotations (frontend). Comments explain *why*, never *what*.
+- Duplication is a defect: any logic repeated three times MUST be extracted.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale**: A small team and an evolving portal cannot afford technical debt
+that compounds. Readable code is the cheapest form of documentation and the
+fastest path to safe change.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. RESTful API Design
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+The backend HTTP surface MUST adhere to REST conventions. The following are
+non-negotiable:
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- Resources are nouns and plural (`/api/v1/projects`, `/api/v1/users/{id}`).
+  Verbs in paths are forbidden.
+- HTTP methods carry semantics: `GET` (safe, idempotent), `POST` (create),
+  `PUT` (full replace, idempotent), `PATCH` (partial update), `DELETE`
+  (idempotent removal).
+- Status codes MUST be precise: `200`, `201`, `204`, `400`, `401`, `403`,
+  `404`, `409`, `422`, `500`. Errors MUST follow RFC 7807
+  (`application/problem+json`).
+- Every endpoint MUST be versioned via the URL prefix `/api/v{n}/`. Breaking
+  changes require a new version; the previous version MUST remain available
+  for at least one release cycle.
+- Pagination, filtering, and sorting MUST use query parameters (`?page=`,
+  `?pageSize=`, `?sort=`, `?filter=`); list responses MUST include total counts.
+- Every endpoint MUST be documented through OpenAPI/Swagger generated by the
+  Web API project; the spec is the source of truth for contracts.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale**: A predictable API contract lets the React frontend, future
+mobile clients, and integration partners evolve independently without ad-hoc
+coordination.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. Simple & Responsive UI/UX
+
+The frontend MUST be usable, accessible, and responsive on every supported
+device. Required practices:
+
+- Layouts MUST be mobile-first and verified at 360px, 768px, 1024px, and
+  1440px breakpoints before merge.
+- UI components MUST be composed from `shadcn/ui` primitives styled with
+  Tailwind utility classes; bespoke CSS files are forbidden except for global
+  resets and design tokens.
+- Interactions MUST meet WCAG 2.1 AA: semantic HTML, keyboard navigation,
+  visible focus states, color contrast ≥ 4.5:1, and ARIA only when semantic
+  HTML is insufficient.
+- Every screen MUST handle the four canonical states: loading, empty, error,
+  and success. Spinners alone are not an acceptable error state.
+- One screen, one purpose: progressive disclosure is preferred over dense
+  forms; navigation depth MUST NOT exceed three levels from the root.
+
+**Rationale**: A portal whose users span devices and accessibility needs must
+deliver clarity over cleverness. Constraining the design system keeps velocity
+high and the experience consistent.
+
+### IV. Minimal Dependencies
+
+Every dependency is a long-term liability. Adding one MUST clear this bar:
+
+- Prefer the standard library, framework primitives, and existing project
+  dependencies before adding anything new.
+- A new third-party package MUST be justified in the pull request with: (a)
+  the problem it solves, (b) at least one rejected alternative, (c) license
+  compatibility (permissive: MIT, Apache-2.0, BSD), and (d) maintenance
+  signals (release within last 12 months, no critical CVEs).
+- Transitive bloat is monitored: backend NuGet additions MUST NOT increase
+  the published artifact size by more than 5% without sign-off; frontend npm
+  additions MUST NOT increase the production bundle by more than 20 KB
+  gzipped without sign-off.
+- Dependencies MUST be pinned (`PackageReference` with explicit version,
+  `package-lock.json` committed) and audited via `dotnet list package
+  --vulnerable` and `npm audit` in CI.
+- Unused dependencies MUST be removed in the same PR that removes their last
+  caller.
+
+**Rationale**: Small dependency surfaces keep builds fast, security exposure
+low, and upgrades tractable for a small maintenance team.
+
+## Technology Stack & Constraints
+
+The stack below is binding. Substitutions require a constitution amendment.
+
+**Backend**
+
+- Runtime: .NET 8 (LTS) Web API, C# with `Nullable` and `ImplicitUsings`
+  enabled and `TreatWarningsAsErrors=true`.
+- Persistence: PostgreSQL 15+ accessed exclusively through Entity Framework
+  Core 8 with the `Npgsql.EntityFrameworkCore.PostgreSQL` provider. Schema
+  changes MUST ship as EF Core migrations checked into source control.
+- API surface: ASP.NET Core controllers (or Minimal APIs) exposing JSON over
+  HTTPS, documented via Swashbuckle/OpenAPI.
+- Authentication MUST use ASP.NET Core Identity or OAuth 2.0 / OIDC; secrets
+  MUST come from configuration providers (User Secrets in dev, environment
+  variables / Key Vault in higher environments) — never hard-coded.
+
+**Frontend**
+
+- Framework: React 18+ with TypeScript in `strict` mode.
+- Styling: Tailwind CSS using the project's design tokens.
+- Components: `shadcn/ui` is the default component library; new primitives
+  are added via the shadcn CLI rather than copied ad-hoc.
+- Build tooling: a single bundler (Vite preferred) and a single package
+  manager committed to the repo. Mixing managers is forbidden.
+
+**Cross-cutting**
+
+- All network traffic MUST be HTTPS; CORS MUST be allow-listed per
+  environment.
+- Structured logging is mandatory (Serilog on the backend, a single logger
+  abstraction on the frontend); PII MUST NOT be logged.
+- The repository MUST contain a single backend solution and a single
+  frontend workspace; additional services require an amendment.
+
+## Development Workflow & Quality Gates
+
+The following gates MUST pass before any change is merged to the main branch:
+
+1. **Branching**: Feature branches follow `###-feature-name` and are created
+   via `/speckit.specify` (which delegates to the Git extension). Direct
+   commits to `main` are forbidden.
+2. **Spec-first**: Non-trivial features MUST have a spec under
+   `specs/###-feature-name/` produced by `/speckit.specify` and a plan from
+   `/speckit.plan` before implementation begins.
+3. **Code review**: Every PR requires at least one reviewer who is not the
+   author. Reviewers MUST verify constitutional compliance and link the
+   relevant principle when requesting changes.
+4. **Automated checks**: CI MUST run, on every PR, the following and all
+   MUST pass: `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes`,
+   `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build`.
+5. **Vulnerability scan**: `dotnet list package --vulnerable
+   --include-transitive` and `npm audit --production` MUST report no high or
+   critical findings; exceptions require a documented mitigation.
+6. **Database migrations**: Any EF Core migration MUST be reviewed for
+   reversibility and tested against a fresh database in CI.
+7. **Documentation**: Public API changes MUST update the OpenAPI spec and
+   the relevant section of the project README or `/docs`.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other engineering practices in the
+repository. When a guideline elsewhere conflicts with the constitution, the
+constitution wins.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+- **Amendments**: Proposed via a PR that modifies this file and any
+  templates affected. The PR MUST include a Sync Impact Report (see top of
+  this file) and is approved by the project maintainers.
+- **Versioning policy**: Semantic versioning applies to this document.
+  - MAJOR — backward-incompatible removal or redefinition of a principle or
+    governance rule.
+  - MINOR — addition of a new principle or section, or material expansion of
+    existing guidance.
+  - PATCH — clarifications, wording, or typo fixes that do not change
+    meaning.
+- **Compliance review**: Every PR description MUST include a one-line
+  statement confirming constitutional compliance or listing the justified
+  exceptions. Complexity that violates a principle MUST be justified in the
+  PR description and acknowledged by the reviewer.
+- **Runtime guidance**: Day-to-day implementation guidance lives in
+  `README.md` and the per-feature `specs/###-feature-name/plan.md`. Those
+  documents MUST defer to this constitution on conflicts.
+
+**Version**: 1.0.0 | **Ratified**: 2026-05-12 | **Last Amended**: 2026-05-12
