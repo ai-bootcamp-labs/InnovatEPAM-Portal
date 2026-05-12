@@ -3,19 +3,45 @@ using InnovatEpam.Portal.Domain.Enums;
 namespace InnovatEpam.Portal.Domain.Ideas;
 
 /// <summary>
-/// Append-only audit row for idea status transitions (FR-021).
-/// See data-model §7. Inserted by the aggregate creator (initial row, from = NULL,
-/// to = Submitted) and by the <c>trg_decision_after_insert</c> trigger.
+/// Append-only audit row for idea status transitions (FR-021). See data-model §7.
+/// Inserted by <see cref="Idea"/> on initial creation (FromStatus = NULL,
+/// ToStatus = Submitted) and by the <c>trg_decision_after_insert</c> trigger
+/// for subsequent transitions.
 /// </summary>
-/// <remarks>Phase 2 stub — Phase 3 (T057) refines.</remarks>
-public class IdeaStatusHistory
+public sealed class IdeaStatusHistory
 {
-    public Guid Id { get; set; }
-    public Guid IdeaId { get; set; }
-    public IdeaStatus? FromStatus { get; set; }
-    public IdeaStatus ToStatus { get; set; }
-    public Guid ActorId { get; set; }
-    public string? Comment { get; set; }
-    public DateTimeOffset OccurredAt { get; set; }
-    public Guid? DecisionId { get; set; }
+    private IdeaStatusHistory() { }
+
+    private IdeaStatusHistory(
+        Guid id,
+        Guid ideaId,
+        IdeaStatus? from,
+        IdeaStatus to,
+        Guid actorId,
+        string? comment,
+        Guid? decisionId,
+        DateTimeOffset occurredAt)
+    {
+        Id = id;
+        IdeaId = ideaId;
+        FromStatus = from;
+        ToStatus = to;
+        ActorId = actorId;
+        Comment = comment;
+        DecisionId = decisionId;
+        OccurredAt = occurredAt;
+    }
+
+    public Guid Id { get; private set; }
+    public Guid IdeaId { get; private set; }
+    public IdeaStatus? FromStatus { get; private set; }
+    public IdeaStatus ToStatus { get; private set; }
+    public Guid ActorId { get; private set; }
+    public string? Comment { get; private set; }
+    public DateTimeOffset OccurredAt { get; private set; }
+    public Guid? DecisionId { get; private set; }
+
+    /// <summary>Initial-creation history row (Submitter → Submitted).</summary>
+    public static IdeaStatusHistory Initial(Guid ideaId, Guid submitterId, DateTimeOffset occurredAt) =>
+        new(Guid.NewGuid(), ideaId, null, IdeaStatus.Submitted, submitterId, null, null, occurredAt);
 }

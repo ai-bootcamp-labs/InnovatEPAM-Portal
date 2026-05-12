@@ -1,10 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api/client';
 
 /**
- * AuthProvider scaffold (T070 fully implements the API integration). Phase 2
- * exposes the shape so the routing layer (T038) can branch on authentication
- * state without coupling to a specific backend client.
+ * AuthProvider — Phase 3 (T070, T073) wires registration and login into the
+ * backend. The bearer token is persisted in localStorage so the API client
+ * (which has no React dependency) can attach it on every request.
  */
 
 export type Role = 'Submitter' | 'Admin';
@@ -16,11 +18,29 @@ export interface AuthUser {
   role: Role;
 }
 
+export interface AuthResponse {
+  accessToken: string;
+  expiresAt: string;
+  user: AuthUser;
+}
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  displayName: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (token: string, user: AuthUser) => void;
+  register: (payload: RegisterPayload) => Promise<AuthResponse>;
+  login: (payload: LoginPayload) => Promise<AuthResponse>;
   logout: () => void;
 }
 
@@ -45,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   const persisted = readPersisted();
   const [token, setToken] = useState<string | null>(persisted?.token ?? null);
   const [user, setUser] = useState<AuthUser | null>(persisted?.user ?? null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (token && user) {
@@ -54,21 +75,41 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     }
   }, [token, user]);
 
+  const applyAuth = useCallback((response: AuthResponse) => {
+    setToken(response.accessToken);
+    setUser(response.user);
+    return response;
+  }, []);
+
+  const register = useCallback(
+    async (payload: RegisterPayload) => applyAuth(await apiClient.post<AuthResponse>('/auth/register', payload)),
+    [applyAuth],
+  );
+
+  const login = useCallback(
+    async (payload: LoginPayload) => applyAuth(await apiClient.post<AuthResponse>('/auth/login', payload)),
+    [applyAuth],
+  );
+
+  const logout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    queryClient.clear();
+    void apiClient.post('/auth/logout').catch(() => {
+      /* logout is best-effort; server side is stateless in Phase 1 */
+    });
+  }, [queryClient]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       token,
       isAuthenticated: token !== null && user !== null,
-      login: (nextToken, nextUser) => {
-        setToken(nextToken);
-        setUser(nextUser);
-      },
-      logout: () => {
-        setToken(null);
-        setUser(null);
-      },
+      register,
+      login,
+      logout,
     }),
-    [token, user],
+    [user, token, register, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

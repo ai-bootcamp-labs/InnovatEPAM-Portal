@@ -4,6 +4,10 @@ using InnovatEpam.Portal.Api.Auth;
 using InnovatEpam.Portal.Api.Conventions;
 using InnovatEpam.Portal.Api.Cors;
 using InnovatEpam.Portal.Api.ErrorHandling;
+using InnovatEpam.Portal.Application.Attachments;
+using InnovatEpam.Portal.Application.Auth;
+using InnovatEpam.Portal.Application.Ideas;
+using InnovatEpam.Portal.Application.Persistence;
 using InnovatEpam.Portal.Application.Storage;
 using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Infrastructure.Persistence;
@@ -123,6 +127,13 @@ builder.Services
     .Bind(builder.Configuration.GetSection("Attachments"));
 builder.Services.AddSingleton<IAttachmentStorage, FileSystemAttachmentStorage>();
 
+// ─── Application services (T062-T064) ────────────────────────────────────────
+builder.Services.AddScoped<IPortalDbContext>(sp => sp.GetRequiredService<PortalDbContext>());
+builder.Services.AddSingleton<IJwtTokenIssuer, JwtTokenIssuer>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IdeaService>();
+builder.Services.AddScoped<AttachmentService>();
+
 // ─── CORS (T029) ─────────────────────────────────────────────────────────────
 builder.Services
     .AddOptions<CorsOptions>()
@@ -140,7 +151,12 @@ builder.Services.AddCors(o => o.AddPolicy(CorsOptions.DefaultPolicyName, policy 
 }));
 
 // ─── MVC + route convention (T030) ───────────────────────────────────────────
-builder.Services.AddControllers(o => o.Conventions.Add(new ApiVersionRouteConvention()));
+builder.Services.AddControllers(o => o.Conventions.Add(new ApiVersionRouteConvention()))
+    .AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 // ─── Body / form size limits (FR-010) ────────────────────────────────────────

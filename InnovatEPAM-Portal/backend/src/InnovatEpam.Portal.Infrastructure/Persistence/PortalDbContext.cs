@@ -1,3 +1,4 @@
+using InnovatEpam.Portal.Application.Persistence;
 using InnovatEpam.Portal.Domain.Attachments;
 using InnovatEpam.Portal.Domain.Categories;
 using InnovatEpam.Portal.Domain.Decisions;
@@ -14,7 +15,7 @@ namespace InnovatEpam.Portal.Infrastructure.Persistence;
 /// Primary EF Core context (T021). All tables live in the <c>portal</c> schema
 /// and use snake_case column names via <c>UseSnakeCaseNamingConvention()</c>.
 /// </summary>
-public class PortalDbContext : IdentityDbContext<AppUser, AppRole, Guid>
+public class PortalDbContext : IdentityDbContext<AppUser, AppRole, Guid>, IPortalDbContext
 {
     public const string SchemaName = "portal";
 

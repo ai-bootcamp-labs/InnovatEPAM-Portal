@@ -5,14 +5,30 @@ namespace InnovatEpam.Portal.Domain.Categories;
 /// migration with <c>process</c>, <c>product</c>, <c>technology</c>,
 /// <c>people</c>, <c>other</c>. See data-model §3.
 /// </summary>
-/// <remarks>
-/// Phase 2 stub — Phase 3 (T054) replaces with a domain-driven aggregate.
-/// </remarks>
-public class Category
+public sealed class Category
 {
-    public Guid Id { get; set; }
-    public string Code { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public bool IsActive { get; set; } = true;
-    public int SortOrder { get; set; }
+    private Category() { }
+
+    private Category(Guid id, string code, string name, int sortOrder)
+    {
+        Id = id;
+        Code = code;
+        Name = name;
+        SortOrder = sortOrder;
+        IsActive = true;
+    }
+
+    public Guid Id { get; private set; }
+    public string Code { get; private set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
+    public bool IsActive { get; private set; } = true;
+    public int SortOrder { get; private set; }
+
+    /// <summary>Factory used by tests and seed data.</summary>
+    public static Category Create(Guid id, string code, string name, int sortOrder = 0)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        return new Category(id, code, name, sortOrder);
+    }
 }
