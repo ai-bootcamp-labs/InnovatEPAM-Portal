@@ -165,25 +165,25 @@ description: "Task list for Phase 1 MVP Ã¢â‚¬â€ InnovatEPAM Portal"
 
 - [ ] T078 [P] [US2] Contract test `DecisionsEndpointTests` in `backend/tests/InnovatEpam.Portal.IntegrationTests/Decisions/DecisionsEndpointTests.cs`: as Admin Ã¢â‚¬â€ `MoveToUnderReview` succeeds with no comment; `Accept` requires non-empty comment (400 if missing); transition from Accepted is rejected with 409; concurrent Accepts on the same idea Ã¢â‚¬â€ second returns 409 (DbUpdateConcurrencyException Ã¢â€ â€™ mapped). As Submitter Ã¢â‚¬â€ same endpoint returns 403 (FR-005, SC-005)
 - [ ] T079 [P] [US2] Contract test `IdeaHistoryTests` in `backend/tests/InnovatEpam.Portal.IntegrationTests/Ideas/IdeaHistoryTests.cs`: after a decision, `GET /api/v1/ideas/{id}/history` returns the chronological transitions including the decision row with comment and actor
-- [ ] T080 [P] [US2] Vitest component test `DecisionDialog.test.tsx` in `frontend/tests/unit/admin/DecisionDialog.test.tsx`: comment-required validation for Accept/Reject; no comment required for `Move to Under Review`; calls correct mutation
+- [x] T080 [P] [US2] Vitest component test `DecisionDialog.test.tsx` in `frontend/tests/unit/admin/DecisionDialog.test.tsx`: comment-required validation for Accept/Reject; no comment required for `Move to Under Review`; calls correct mutation
 - [ ] T081 [P] [US2] Playwright E2E `admin-decision.spec.ts` in `frontend/tests/e2e/admin-decision.spec.ts` covering M2.3, M2.4, M2.5, M2.6, M2.10
 
 ### Backend implementation
 
-- [ ] T082 [P] [US2] Create `Decision` entity in `backend/src/InnovatEpam.Portal.Domain/Decisions/Decision.cs` per data-model Ã‚Â§6; constructor enforces "comment required for Accept/Reject"
-- [ ] T083 [US2] Add EF configuration for `Decision` in `backend/src/InnovatEpam.Portal.Infrastructure/Persistence/Configurations/DecisionConfiguration.cs`; wire `Idea.LastDecisionId` FK; ensure `Idea` `xmin` row version is honoured (depends on T058, T082)
-- [ ] T084 [P] [US2] Define DTOs `CreateDecisionRequest`, `StatusHistoryEntry` in `backend/src/InnovatEpam.Portal.Application/Decisions/Dtos/`; FluentValidation validator enforces the comment rule
-- [ ] T085 [US2] Implement `DecisionService.RecordAsync(ideaId, action, comment, adminId)` in `backend/src/InnovatEpam.Portal.Application/Decisions/DecisionService.cs`: loads `Idea`, calls `Idea.TransitionTo(...)` (T055), inserts `Decision` row, persists; relies on the trigger from T035 to update history + idea pointer; catches `DbUpdateConcurrencyException` and rethrows `ConflictException` (depends on T055, T082, T084)
-- [ ] T086 [US2] Implement `POST /api/v1/ideas/{id}/decisions` in `IdeasController` (or a new `DecisionsController`) decorated with `[Authorize(Policy = "Admin")]`; returns updated `IdeaDetail` (depends on T085, T025)
-- [ ] T087 [US2] Extend `IdeaDetail` projection (T063 `GetByIdAsync`) and the `GET /ideas/{id}/history` endpoint to surface `lastDecisionComment`, `lastDecisionBy`, `lastDecisionAt`, and the full chronological `IdeaStatusHistory` (FR-021)
+- [x] T082 [P] [US2] Create `Decision` entity in `backend/src/InnovatEpam.Portal.Domain/Decisions/Decision.cs` per data-model Ã‚Â§6; constructor enforces "comment required for Accept/Reject"
+- [x] T083 [US2] Add EF configuration for `Decision` in `backend/src/InnovatEpam.Portal.Infrastructure/Persistence/Configurations/DecisionConfiguration.cs`; wire `Idea.LastDecisionId` FK; ensure `Idea` `xmin` row version is honoured (depends on T058, T082)
+- [x] T084 [P] [US2] Define DTOs `CreateDecisionRequest`, `StatusHistoryEntry` in `backend/src/InnovatEpam.Portal.Application/Decisions/Dtos/`; FluentValidation validator enforces the comment rule
+- [x] T085 [US2] Implement `DecisionService.RecordAsync(ideaId, action, comment, adminId)` in `backend/src/InnovatEpam.Portal.Application/Decisions/DecisionService.cs`: loads `Idea`, calls `Idea.TransitionTo(...)` (T055), inserts `Decision` row, persists; relies on the trigger from T035 to update history + idea pointer; catches `DbUpdateConcurrencyException` and rethrows `ConflictException` (depends on T055, T082, T084)
+- [x] T086 [US2] Implement `POST /api/v1/ideas/{id}/decisions` in `IdeasController` (or a new `DecisionsController`) decorated with `[Authorize(Policy = "Admin")]`; returns updated `IdeaDetail` (depends on T085, T025)
+- [x] T087 [US2] Extend `IdeaDetail` projection (T063 `GetByIdAsync`) and the `GET /ideas/{id}/history` endpoint to surface `lastDecisionComment`, `lastDecisionBy`, `lastDecisionAt`, and the full chronological `IdeaStatusHistory` (FR-021)
 
 ### Frontend implementation
 
-- [ ] T088 [P] [US2] Build `useDecisionMutation` in `frontend/src/features/admin/api.ts` using TanStack Query; on success invalidates `['ideas']` and `['idea', id]`
-- [ ] T089 [US2] Build `DecisionDialog` in `frontend/src/features/admin/DecisionDialog.tsx` (shadcn `Dialog` + `Form`): three actions (`Move to Under Review`, `Accept`, `Reject`); `Accept`/`Reject` require non-empty comment; on success closes dialog and toasts "Decision recorded" (depends on T088, T044)
-- [ ] T090 [US2] Add `<DecideControls />` to `IdeaDetailPage` visible only when `useAuth().user.role === 'Admin'` and idea status is not terminal; disable controls otherwise with tooltip "Idea has reached a terminal status" (FR-020) (depends on T076, T089)
-- [ ] T091 [US2] Extend `IdeaDetailPage` to render `lastDecisionComment`, `lastDecisionBy.displayName`, `formatIdeaDateTime(lastDecisionAt)` and the full `StatusHistoryEntry` timeline (depends on T076, T087)
-- [ ] T092 [US2] Show conflict (409) errors from the decision mutation as inline error using `ErrorState`/toast and refresh the idea (handles "two admins decide simultaneously" edge case)
+- [x] T088 [P] [US2] Build `useDecisionMutation` in `frontend/src/features/admin/api.ts` using TanStack Query; on success invalidates `['ideas']` and `['idea', id]`
+- [x] T089 [US2] Build `DecisionDialog` in `frontend/src/features/admin/DecisionDialog.tsx` (shadcn `Dialog` + `Form`): three actions (`Move to Under Review`, `Accept`, `Reject`); `Accept`/`Reject` require non-empty comment; on success closes dialog and toasts "Decision recorded" (depends on T088, T044)
+- [x] T090 [US2] Add `<DecideControls />` to `IdeaDetailPage` visible only when `useAuth().user.role === 'Admin'` and idea status is not terminal; disable controls otherwise with tooltip "Idea has reached a terminal status" (FR-020) (depends on T076, T089)
+- [x] T091 [US2] Extend `IdeaDetailPage` to render `lastDecisionComment`, `lastDecisionBy.displayName`, `formatIdeaDateTime(lastDecisionAt)` and the full `StatusHistoryEntry` timeline (depends on T076, T087)
+- [x] T092 [US2] Show conflict (409) errors from the decision mutation as inline error using `ErrorState`/toast and refresh the idea (handles "two admins decide simultaneously" edge case)
 
 **Checkpoint**: Run checklist M2. All steps pass.
 

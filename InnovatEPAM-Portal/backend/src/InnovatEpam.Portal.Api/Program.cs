@@ -6,6 +6,7 @@ using InnovatEpam.Portal.Api.Cors;
 using InnovatEpam.Portal.Api.ErrorHandling;
 using InnovatEpam.Portal.Application.Attachments;
 using InnovatEpam.Portal.Application.Auth;
+using InnovatEpam.Portal.Application.Decisions;
 using InnovatEpam.Portal.Application.Ideas;
 using InnovatEpam.Portal.Application.Persistence;
 using InnovatEpam.Portal.Application.Storage;
@@ -133,6 +134,7 @@ builder.Services.AddSingleton<IJwtTokenIssuer, JwtTokenIssuer>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IdeaService>();
 builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<DecisionService>();
 
 // ─── CORS (T029) ─────────────────────────────────────────────────────────────
 builder.Services
