@@ -1,10 +1,12 @@
-import { forwardRef, useState } from 'react';
+import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { ApiError } from '@/lib/api/client';
+import { Container } from '@/components/layout/Container';
+import { Button, FieldError, Input, Label } from '@/components/ui';
 
 /** Register form schema (T071) — matches backend RegisterRequestValidator. */
 const schema = z.object({
@@ -23,6 +25,7 @@ export function RegisterPage(): JSX.Element {
   const { register: registerUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
+  const formId = useId();
   const {
     register,
     handleSubmit,
@@ -49,21 +52,41 @@ export function RegisterPage(): JSX.Element {
     }
   }
 
+  const fieldDefs = [
+    { name: 'displayName' as const, label: 'Display name', type: 'text', autoComplete: 'name' },
+    { name: 'email' as const, label: 'Email', type: 'email', autoComplete: 'email' },
+    { name: 'password' as const, label: 'Password', type: 'password', autoComplete: 'new-password' },
+  ];
+
   return (
-    <main className="mx-auto max-w-md px-4 py-16">
+    <Container as="main" className="max-w-md py-16">
       <h1 className="text-3xl font-semibold tracking-tight">Create account</h1>
       <p className="mt-2 text-sm text-muted-foreground">Submit and track your innovation ideas.</p>
 
-      <form className="mt-8 space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-        <Field label="Display name" error={errors.displayName?.message} {...register('displayName')} />
-        <Field label="Email" type="email" autoComplete="email" error={errors.email?.message} {...register('email')} />
-        <Field
-          label="Password"
-          type="password"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register('password')}
-        />
+      <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+        {fieldDefs.map((f) => {
+          const fieldId = `${formId}-${f.name}`;
+          const errorId = `${fieldId}-error`;
+          const message = errors[f.name]?.message;
+          return (
+            <div key={f.name} className="space-y-1">
+              <Label htmlFor={fieldId} required>
+                {f.label}
+              </Label>
+              <Input
+                id={fieldId}
+                type={f.type}
+                autoComplete={f.autoComplete}
+                aria-required
+                aria-describedby={message ? errorId : undefined}
+                invalid={Boolean(message)}
+                disabled={isSubmitting}
+                {...register(f.name)}
+              />
+              <FieldError id={errorId}>{message}</FieldError>
+            </div>
+          );
+        })}
 
         {serverError ? (
           <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -71,37 +94,26 @@ export function RegisterPage(): JSX.Element {
           </p>
         ) : null}
 
-        <button
+        <Button
           type="submit"
+          variant="primary"
+          loading={isSubmitting}
           disabled={isSubmitting}
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          className="w-full"
         >
-          {isSubmitting ? 'Creating accountâ€¦' : 'Create account'}
-        </button>
+          {isSubmitting ? 'Creating account…' : 'Create account'}
+        </Button>
       </form>
 
       <p className="mt-6 text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link to="/login" className="font-medium text-primary hover:underline">
+        <Link
+          to="/login"
+          className="rounded font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
           Sign in
         </Link>
       </p>
-    </main>
+    </Container>
   );
 }
-
-type FieldProps = React.InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string };
-
-const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({ label, error, ...rest }, ref) {
-  return (
-    <label className="block text-sm">
-      <span className="font-medium text-foreground">{label}</span>
-      <input
-        ref={ref}
-        {...rest}
-        className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-      />
-      {error ? <span className="mt-1 block text-xs text-destructive">{error}</span> : null}
-    </label>
-  );
-});

@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import { useCategoriesQuery, type IdeaSort, type IdeasFilter } from '@/features/ideas/api';
-import type { IdeaStatus } from '@/components/state/StatusBadge';
+import { Select, type IdeaStatus } from '@/components/ui';
 
 const STATUS_OPTIONS: IdeaStatus[] = ['Submitted', 'UnderReview', 'Accepted', 'Rejected'];
 
@@ -66,13 +66,13 @@ export function IdeasFilters(): JSX.Element {
 
   return (
     <section className="flex flex-wrap gap-3" aria-label="Filter ideas">
-      <label className="flex flex-col text-xs font-medium text-muted-foreground">
+      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
         Status
-        <select
+        <Select
           aria-label="Filter by status"
           value={params.get('status') ?? ''}
           onChange={(e) => updateParam('status', e.target.value || null)}
-          className="mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+          className="h-9 min-w-[10rem]"
         >
           <option value="">All statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -80,17 +80,17 @@ export function IdeasFilters(): JSX.Element {
               {s}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
 
-      <label className="flex flex-col text-xs font-medium text-muted-foreground">
+      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
         Category
-        <select
+        <Select
           aria-label="Filter by category"
           value={params.get('categoryCode') ?? ''}
           onChange={(e) => updateParam('categoryCode', e.target.value || null)}
           disabled={categoriesQuery.isLoading}
-          className="mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground disabled:opacity-60"
+          className="h-9 min-w-[10rem]"
         >
           <option value="">All categories</option>
           {(categoriesQuery.data ?? []).map((c) => (
@@ -98,39 +98,39 @@ export function IdeasFilters(): JSX.Element {
               {c.name}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
 
-      <label className="flex flex-col text-xs font-medium text-muted-foreground">
+      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
         Sort
-        <select
+        <Select
           aria-label="Sort ideas"
           value={params.get('sort') ?? '-createdAt'}
           onChange={(e) => updateParam('sort', e.target.value)}
-          className="mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+          className="h-9 min-w-[10rem]"
         >
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
 
-      <label className="flex flex-col text-xs font-medium text-muted-foreground">
+      <label className="flex flex-col gap-1 text-xs font-medium text-muted-foreground">
         Page size
-        <select
+        <Select
           aria-label="Results per page"
           value={String(pageSize)}
           onChange={(e) => updatePageSize(e.target.value)}
-          className="mt-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+          className="h-9 min-w-[6rem]"
         >
           {PAGE_SIZE_OPTIONS.map((n) => (
             <option key={n} value={n}>
               {n}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
     </section>
   );

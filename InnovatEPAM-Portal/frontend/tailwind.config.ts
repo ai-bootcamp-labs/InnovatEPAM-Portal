@@ -43,11 +43,35 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        status: {
+          submitted: {
+            DEFAULT: 'hsl(var(--status-submitted))',
+            foreground: 'hsl(var(--status-submitted-foreground))',
+          },
+          'under-review': {
+            DEFAULT: 'hsl(var(--status-under-review))',
+            foreground: 'hsl(var(--status-under-review-foreground))',
+          },
+          accepted: {
+            DEFAULT: 'hsl(var(--status-accepted))',
+            foreground: 'hsl(var(--status-accepted-foreground))',
+          },
+          rejected: {
+            DEFAULT: 'hsl(var(--status-rejected))',
+            foreground: 'hsl(var(--status-rejected-foreground))',
+          },
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      transitionDuration: {
+        fast: 'var(--duration-fast)',
+      },
+      transitionTimingFunction: {
+        standard: 'var(--ease-standard)',
       },
     },
   },

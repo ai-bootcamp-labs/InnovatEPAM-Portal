@@ -3,6 +3,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import type { IdeaDetail } from '@/features/ideas/api';
 import { DecisionDialog } from '@/features/admin/DecisionDialog';
 import type { DecisionAction } from '@/features/admin/api';
+import { Button, type ButtonVariant } from '@/components/ui';
 
 interface DecideControlsProps {
   idea: IdeaDetail;
@@ -24,37 +25,25 @@ export function DecideControls({ idea, onDecisionRecorded }: DecideControlsProps
   const isTerminal = TERMINAL_STATUSES.has(idea.status);
   const disabledTitle = isTerminal ? 'Idea has reached a terminal status' : undefined;
 
-  const buttons: { action: DecisionAction; label: string; variant: string }[] = [
-    {
-      action: 'MoveToUnderReview',
-      label: 'Move to Under Review',
-      variant: 'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
-    },
-    {
-      action: 'Accept',
-      label: 'Accept',
-      variant: 'bg-emerald-600 text-white hover:bg-emerald-600/90',
-    },
-    {
-      action: 'Reject',
-      label: 'Reject',
-      variant: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-    },
+  const buttons: { action: DecisionAction; label: string; variant: ButtonVariant }[] = [
+    { action: 'MoveToUnderReview', label: 'Move to Under Review', variant: 'secondary' },
+    { action: 'Accept', label: 'Accept', variant: 'primary' },
+    { action: 'Reject', label: 'Reject', variant: 'destructive' },
   ];
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {buttons.map(({ action, label, variant }) => (
-        <button
+        <Button
           key={action}
-          type="button"
+          variant={variant}
+          size="sm"
           onClick={() => setOpenAction(action)}
           disabled={isTerminal}
           title={disabledTitle}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${variant}`}
         >
           {label}
-        </button>
+        </Button>
       ))}
 
       {openAction ? (

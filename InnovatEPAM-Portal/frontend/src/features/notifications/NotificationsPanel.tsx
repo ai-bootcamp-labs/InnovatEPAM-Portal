@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatRelative } from '@/lib/date';
+import { Button, LoadingSkeleton } from '@/components/ui';
+import { cn } from '@/lib/ui/cn';
 import {
   NOTIFICATION_KIND_IDEA_STATUS_CHANGED,
   parseNotificationPayload,
@@ -61,6 +63,8 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps): 
       aria-labelledby="notifications-panel-title"
       className="fixed inset-0 z-50 flex justify-end"
     >
+      {/* ui-polish-exception: invisible overlay click-catcher behind the sheet;
+          a Button primitive would carry visible styling we explicitly don't want here. */}
       <button
         type="button"
         aria-label="Close notifications"
@@ -72,45 +76,61 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps): 
           <h2 id="notifications-panel-title" className="text-base font-semibold text-foreground">
             Notifications
           </h2>
-          <button
+          <Button
             ref={closeButtonRef}
-            type="button"
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="rounded-md border border-border bg-background px-2 py-1 text-xs hover:bg-accent hover:text-accent-foreground"
           >
             Close
-          </button>
+          </Button>
         </header>
 
         <div className="flex-1 overflow-y-auto">
           {query.isLoading ? (
-            <p className="px-4 py-6 text-sm text-muted-foreground">Loading…</p>
+            <div className="px-4 py-6">
+              <LoadingSkeleton rows={3} rowClassName="h-14" />
+            </div>
           ) : query.isError ? (
             <p role="alert" className="px-4 py-6 text-sm text-destructive">
               Could not load notifications.
             </p>
           ) : query.data && query.data.length > 0 ? (
-            <ul className="divide-y divide-border">
-              {query.data.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(item)}
-                    className={`flex w-full flex-col gap-1 px-4 py-3 text-left hover:bg-accent hover:text-accent-foreground ${
-                      item.readAt === null ? 'bg-accent/30' : ''
-                    }`}
-                  >
-                    <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      {item.readAt === null ? (
-                        <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-primary" />
-                      ) : null}
-                      <NotificationTitle item={item} />
-                    </span>
-                    <NotificationBody item={item} />
-                    <span className="text-xs text-muted-foreground">{formatRelative(item.createdAt)}</span>
-                  </button>
-                </li>
-              ))}
+            <ul className="divide-y divide-border" aria-label="Notifications">
+              {query.data.map((item) => {
+                const unread = item.readAt === null;
+                return (
+                  <li key={item.id}>
+                    {/* ui-polish-exception: card-style row is a full-width <button> so a
+                       single click both marks the notification as read and navigates to
+                       the related idea (T046, FR-008 — behaviour preserved). The visual
+                       treatment mirrors a `Card hoverable` row and `Button variant="ghost"`. */}
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(item)}
+                      className={cn(
+                        'flex w-full flex-col gap-1 px-4 py-3 text-left',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                        'hover:bg-accent hover:text-accent-foreground',
+                        'motion-safe:transition-colors motion-safe:duration-fast motion-safe:ease-standard',
+                        unread && 'bg-accent/30',
+                      )}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        {unread ? (
+                          <span
+                            aria-hidden="true"
+                            className="inline-block h-2 w-2 rounded-full bg-primary"
+                          />
+                        ) : null}
+                        <NotificationTitle item={item} />
+                      </span>
+                      <NotificationBody item={item} />
+                      <span className="text-xs text-muted-foreground">{formatRelative(item.createdAt)}</span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="px-4 py-6 text-sm text-muted-foreground">You have no notifications yet.</p>

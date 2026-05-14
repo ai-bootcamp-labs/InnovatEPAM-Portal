@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ideasKeys, type IdeaDetail } from '@/features/ideas/api';
-import type { IdeaStatus } from '@/components/state/StatusBadge';
+import type { IdeaStatus } from '@/components/ui';
 
 /** Mirrors `DecisionAction` in the backend. */
 export type DecisionAction = 'MoveToUnderReview' | 'Accept' | 'Reject';

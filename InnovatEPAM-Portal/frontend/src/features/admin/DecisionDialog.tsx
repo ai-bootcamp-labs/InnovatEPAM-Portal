@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useDecisionMutation, type DecisionAction } from '@/features/admin/api';
 import { ApiError } from '@/lib/api/client';
+import { Button, FieldError, Label, Textarea } from '@/components/ui';
 
 interface DecisionDialogProps {
   open: boolean;
@@ -43,6 +44,9 @@ export function DecisionDialog({ open, ideaId, action, onClose, onSuccess }: Dec
   const [conflict, setConflict] = useState<string | null>(null);
   const mutation = useDecisionMutation();
   const firstFieldRef = useRef<HTMLTextAreaElement | null>(null);
+  const dialogId = useId();
+  const commentId = `${dialogId}-comment`;
+  const commentErrId = `${commentId}-error`;
 
   useEffect(() => {
     if (open) {
@@ -89,6 +93,8 @@ export function DecisionDialog({ open, ideaId, action, onClose, onSuccess }: Dec
       aria-labelledby="decision-dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
     >
+      {/* ui-polish-exception: invisible click-catcher used to dismiss the dialog;
+          a Button primitive would render visible styling that we explicitly don't want. */}
       <button
         type="button"
         aria-label="Close dialog"
@@ -102,26 +108,29 @@ export function DecisionDialog({ open, ideaId, action, onClose, onSuccess }: Dec
         <p className="mt-1 text-sm text-muted-foreground">{copy.description}</p>
 
         <form className="mt-4 space-y-3" onSubmit={handleSubmit} noValidate>
-          <label className="block text-sm">
-            <span className="font-medium text-foreground">
-              Comment {copy.commentRequired ? <span aria-hidden="true">*</span> : <span className="text-muted-foreground">(optional)</span>}
-            </span>
-            <textarea
+          <div className="space-y-1">
+            <Label htmlFor={commentId} required={copy.commentRequired}>
+              Comment
+              {copy.commentRequired ? null : (
+                <span className="ml-1 font-normal text-muted-foreground">(optional)</span>
+              )}
+            </Label>
+            <Textarea
+              id={commentId}
               ref={firstFieldRef}
               rows={5}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               maxLength={2000}
               required={copy.commentRequired}
-              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              aria-required={copy.commentRequired || undefined}
+              aria-describedby={error ? commentErrId : undefined}
+              invalid={Boolean(error)}
+              disabled={mutation.isPending}
             />
-          </label>
+            <FieldError id={commentErrId}>{error}</FieldError>
+          </div>
 
-          {error ? (
-            <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
           {conflict ? (
             <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {conflict}
@@ -129,20 +138,24 @@ export function DecisionDialog({ open, ideaId, action, onClose, onSuccess }: Dec
           ) : null}
 
           <div className="mt-4 flex justify-end gap-2">
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={onClose}
-              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+              disabled={mutation.isPending}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant={action === 'Reject' ? 'destructive' : 'primary'}
+              size="sm"
+              loading={mutation.isPending}
               disabled={mutation.isPending}
-              className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
               {mutation.isPending ? 'Recording…' : copy.submit}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

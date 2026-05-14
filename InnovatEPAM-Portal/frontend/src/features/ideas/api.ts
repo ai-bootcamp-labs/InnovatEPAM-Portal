@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseQueryOptions } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
-import type { IdeaStatus } from '@/components/state/StatusBadge';
+import type { IdeaStatus } from '@/components/ui';
 
 /** ─── DTOs (mirror backend records) ───────────────────────────────────── */
 

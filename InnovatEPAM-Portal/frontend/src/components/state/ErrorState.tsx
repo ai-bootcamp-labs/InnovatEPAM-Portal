@@ -1,4 +1,6 @@
-/** Error placeholder with optional retry callback (T044). */
+import { Button } from '@/components/ui';
+
+/** Error placeholder with optional retry callback (T044, T047). */
 export function ErrorState({
   title = 'Something went wrong',
   message,
@@ -13,13 +15,11 @@ export function ErrorState({
       <h2 className="text-base font-semibold text-destructive">{title}</h2>
       {message ? <p className="mt-1 text-sm text-foreground">{message}</p> : null}
       {onRetry ? (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-4 rounded-md border border-border bg-background px-3 py-1 text-sm hover:bg-accent hover:text-accent-foreground"
-        >
-          Try again
-        </button>
+        <div className="mt-4">
+          <Button variant="secondary" size="sm" onClick={onRetry}>
+            Try again
+          </Button>
+        </div>
       ) : null}
     </div>
   );

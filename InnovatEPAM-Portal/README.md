@@ -32,6 +32,43 @@ startup by `AdminUserSeeder` (T107). The default credentials are
 | `GET /api/v1/health/live`  | Liveness — process is up                 | none |
 | `GET /api/v1/health/ready` | Readiness — Postgres reachable           | none |
 
+## Shared UI primitives
+
+The frontend exposes a single barrel at `@/components/ui` (see
+[frontend/src/components/ui/index.ts](frontend/src/components/ui/index.ts)).
+Feature pages import from the barrel only — never reach into individual files.
+The ten primitives plus the `cn()` class-merge helper cover every interactive
+surface in the SPA; see [specs/008-ui-polish/](specs/008-ui-polish/) for the
+full spec and reviewer checklist.
+
+| Primitive          | Purpose                                                    |
+|--------------------|------------------------------------------------------------|
+| `Button`           | All clickable actions (variants: `primary`, `secondary`, `ghost`, `destructive`, `link`). |
+| `Input`            | Single-line text inputs with shared focus ring + `aria-invalid` styling. |
+| `Textarea`         | Multi-line inputs with the same focus/invalid tokens.       |
+| `Select`           | Native `<select>` with inline caret + shared tokens.        |
+| `Label`            | Form labels paired with `Input` / `Textarea` / `Select`.    |
+| `FieldError`       | Inline error message bound to a field via `aria-describedby`. |
+| `StatusBadge`      | Idea-status pill (icon + text, never colour-only).          |
+| `Card`             | Surface container; `hoverable` variant for clickable rows.  |
+| `EmptyState`       | Zero-state panels for empty lists / queues.                 |
+| `LoadingSkeleton`  | Skeleton + `Spinner` helpers, motion-safe gated.            |
+
+The `cn()` helper (`clsx` + `tailwind-merge`) is the only sanctioned way to
+compose Tailwind classes:
+
+```tsx
+import { Button, StatusBadge } from '@/components/ui';
+
+<Button variant="primary" onClick={onSubmit}>Submit idea</Button>
+<StatusBadge status="UnderReview" />
+```
+
+When a raw `<button>` / `<input>` is genuinely required (invisible overlays,
+icon-only triggers, `sr-only` file inputs), annotate it with a
+`// ui-polish-exception: <reason>` comment so the next audit knows it is
+intentional.
+
 ## Governance
 
 All work follows the project constitution at
