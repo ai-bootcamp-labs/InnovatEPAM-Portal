@@ -276,6 +276,14 @@ app.MapControllers();
 // ─── Admin seeding (T107) ───────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
+    // Apply any pending EF Core migrations before seeding. In container-based
+    // dev (docker compose up) the host no longer runs `dotnet ef database update`
+    // manually, so the seeder would otherwise hit tables that don't exist yet
+    // and crash the process before Kestrel binds — surfacing as
+    // ERR_CONNECTION_REFUSED on the frontend.
+    var db = scope.ServiceProvider.GetRequiredService<PortalDbContext>();
+    await db.Database.MigrateAsync();
+
     await AdminUserSeeder.SeedAsync(scope.ServiceProvider);
 }
 

@@ -1,0 +1,13 @@
+# Files that don't need to be in the build context for the API image.
+# Build context is the `backend/` directory; trim everything that's
+# OS-specific build output or unrelated to `dotnet restore` / `publish`.
+
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/*.user
+**/TestResults/
+**/.attachments/
+**/coverage*/
+**/*.log

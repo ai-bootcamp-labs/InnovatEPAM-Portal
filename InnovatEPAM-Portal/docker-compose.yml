@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: innovatepam-pg
+    environment:
+      POSTGRES_DB: innovatepam
+      POSTGRES_USER: innovatepam
+      POSTGRES_PASSWORD: devpassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - innovatepam-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U innovatepam -d innovatepam"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      # Build context is `backend/` so the Dockerfile can see every csproj
+      # in the solution graph for a layered restore.
+      context: ./backend
+      dockerfile: src/InnovatEpam.Portal.Api/Dockerfile
+    container_name: innovatepam-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      # ASP.NET Core configuration keys use double-underscore for nested sections.
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      # Container only binds HTTP; explicitly clear the HTTPS port so
+      # UseHttpsRedirection doesn't log "Failed to determine the https port"
+      # on every startup.
+      ASPNETCORE_HTTPS_PORTS: ""
+      # Inside the compose network the DB is reachable via the service name
+      # (`postgres`) on its native port 5432 — NOT the host-published 5433.
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=innovatepam;Username=innovatepam;Password=devpassword"
+      # The Vite dev server still runs on the host at :5173, so CORS must
+      # explicitly allow that origin.
+      Cors__AllowedOrigins__0: "http://localhost:5173"
+      Attachments__RootPath: "/app/.attachments"
+    ports:
+      # Host 5222 → container 8080 so the existing frontend default
+      # (VITE_API_BASE_URL fallback `http://localhost:5222/api/v1`) keeps working.
+      - "5222:8080"
+    volumes:
+      # Persist attachments across container restarts in dev.
+      - innovatepam-attachments:/app/.attachments
+
+volumes:
+  innovatepam-pg-data:
+  innovatepam-attachments:
+
