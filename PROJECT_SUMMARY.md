@@ -32,17 +32,14 @@ end-to-end from a single `docker compose up --build` command.
   (lint 0, tests 70/70, build green), CSS 4.60 KB gz (well inside the
   13.84 KB cap), zero new runtime deps, accessibility + reviewer checklist
   added to `quickstart.md`.
-- [x] **Phase 7** — UI polish & docs: shared primitives section added to the
-  root README; reviewer checklist consolidated; project documentation
-  finalised.
-- [x] **Phase 8** — Blind review (spec `009-phase6-and-7`): admin reviewers
+  - [x] **Phase 6** — Blind review (spec `009-phase6-and-7`): admin reviewers
   see deterministic per-idea aliases (`Submitter #ABCD`) instead of real
   names while an idea is in `Submitted` / `UnderReview`; identities are
   re-revealed on `Accepted` / `Rejected`, and submitters always see their
   own idea unredacted. Aliases derived via HMAC-SHA256 keyed by the
   `BlindReview:AliasSalt` config value (rotating the salt invalidates
   historical aliases by design).
-- [x] **Phase 9** — 1-5 scoring system (spec `009-phase6-and-7`): admins
+- [x] **Phase 7** — 1-5 scoring system (spec `009-phase6-and-7`): admins
   score open ideas across four dimensions (impact, feasibility, innovation,
   alignment) with an optional comment; one score per (idea, reviewer),
   upserted via `POST /api/ideas/{id}/scores`. Aggregates (per-dimension and
@@ -50,6 +47,10 @@ end-to-end from a single `docker compose up --build` command.
   pages and sortable via `sort=score:desc|asc`. Self-scoring is forbidden
   (409 `SelfScoringForbidden`); scoring is closed once an idea is decided
   (409 `ScoringClosed`).
+- [x] **Phase 9** — UI polish & docs: shared primitives section added to the
+  root README; reviewer checklist consolidated; project documentation
+  finalised.
+
 
 ## Tech Stack
 
