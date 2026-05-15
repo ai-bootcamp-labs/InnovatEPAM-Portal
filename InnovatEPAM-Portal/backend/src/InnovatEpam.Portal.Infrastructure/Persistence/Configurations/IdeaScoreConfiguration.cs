@@ -1,5 +1,5 @@
-using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Domain.Ideas;
+using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Domain.Scoring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
