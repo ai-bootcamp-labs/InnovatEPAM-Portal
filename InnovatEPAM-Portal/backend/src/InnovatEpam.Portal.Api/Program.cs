@@ -294,3 +294,5 @@ app.Run();
 
 /// <summary>Test discoverability for <c>WebApplicationFactory&lt;Program&gt;</c>.</summary>
 public partial class Program;
+
+// trigger ci pipeline
