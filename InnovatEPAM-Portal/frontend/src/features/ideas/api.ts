@@ -19,10 +19,17 @@ export interface IdeaListItem {
   categoryName: string;
   status: IdeaStatus;
   submitterId: string;
-  submitterName: string;
+  /** Null when blind-review mode hides identity. Mutually exclusive with submitterAlias. */
+  submitterName: string | null;
   hasAttachment: boolean;
   createdAt: string;
   updatedAt: string;
+  /** Stable, idea-scoped alias (e.g. "Submitter #ABCD"). Non-null exactly when submitterName is null. */
+  submitterAlias: string | null;
+  /** Mean of the four dimension averages, rounded to 2dp. Null when no scores yet. */
+  overall: number | null;
+  /** Distinct reviewers who have scored this idea. */
+  reviewerCount: number;
 }
 
 export interface PagedIdeas {
@@ -40,6 +47,31 @@ export interface AttachmentSummary {
   uploadedAt: string;
 }
 
+export interface IdeaScoreAverageByDimension {
+  impact: number;
+  feasibility: number;
+  innovation: number;
+  alignment: number;
+}
+
+export interface IdeaScoreEntry {
+  reviewerAlias: string;
+  impact: number;
+  feasibility: number;
+  innovation: number;
+  alignment: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IdeaScoreAggregate {
+  count: number;
+  overall: number | null;
+  averageByDimension: IdeaScoreAverageByDimension | null;
+  entries: IdeaScoreEntry[];
+}
+
 export interface IdeaDetail {
   id: string;
   title: string;
@@ -48,7 +80,7 @@ export interface IdeaDetail {
   categoryName: string;
   status: IdeaStatus;
   submitterId: string;
-  submitterName: string;
+  submitterName: string | null;
   attachment: AttachmentSummary | null;
   lastDecisionComment: string | null;
   lastDecisionById: string | null;
@@ -56,6 +88,8 @@ export interface IdeaDetail {
   lastDecisionAt: string | null;
   createdAt: string;
   updatedAt: string;
+  submitterAlias: string | null;
+  scores: IdeaScoreAggregate | null;
 }
 
 export interface CreateIdeaPayload {
@@ -64,7 +98,15 @@ export interface CreateIdeaPayload {
   categoryId: string;
 }
 
-export type IdeaSort = 'createdAt' | '-createdAt' | 'updatedAt' | '-updatedAt' | 'title' | '-title';
+export type IdeaSort =
+  | 'createdAt'
+  | '-createdAt'
+  | 'updatedAt'
+  | '-updatedAt'
+  | 'title'
+  | '-title'
+  | 'score:asc'
+  | 'score:desc';
 
 export interface IdeasFilter {
   status?: IdeaStatus;

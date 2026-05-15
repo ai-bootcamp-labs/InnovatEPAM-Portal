@@ -68,6 +68,16 @@ public sealed class DomainExceptionHandler : IExceptionHandler
     private static (int? Status, string Title, IReadOnlyDictionary<string, string[]>? Errors) Map(Exception ex) => ex switch
     {
         NotFoundException => (StatusCodes.Status404NotFound, "Resource not found", null),
+        // Phase 6/7 — surface a stable machine-readable `code` so the React
+        // client can switch on it without parsing the title (FR-007, FR-009).
+        SelfScoringForbiddenException => (
+            StatusCodes.Status409Conflict,
+            "Conflict",
+            new Dictionary<string, string[]> { ["code"] = new[] { SelfScoringForbiddenException.Code } }),
+        ScoringClosedException => (
+            StatusCodes.Status409Conflict,
+            "Conflict",
+            new Dictionary<string, string[]> { ["code"] = new[] { ScoringClosedException.Code } }),
         ConflictException => (StatusCodes.Status409Conflict, "Conflict", null),
         ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden", null),
         DomainValidationException dv => (StatusCodes.Status400BadRequest, "Validation failed", dv.Errors),

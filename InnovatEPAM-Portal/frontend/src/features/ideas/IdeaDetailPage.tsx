@@ -8,6 +8,9 @@ import { formatIdeaDateTime } from '@/lib/date';
 import { apiClient } from '@/lib/api/client';
 import { DecideControls } from '@/features/admin/DecideControls';
 import { useIdeaHistoryQuery } from '@/features/admin/api';
+import { SubmitterLabel } from '@/features/ideas/SubmitterLabel';
+import { ScorePanel } from '@/features/scoring/ScorePanel';
+import { ScoreAggregate } from '@/features/scoring/ScoreAggregate';
 
 /** Read-only idea detail page (T076). */
 export function IdeaDetailPage(): JSX.Element {
@@ -51,7 +54,9 @@ export function IdeaDetailPage(): JSX.Element {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">{idea.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Submitted by {idea.submitterName} on {formatIdeaDateTime(idea.createdAt)} · {idea.categoryName}
+            Submitted by{' '}
+            <SubmitterLabel name={idea.submitterName} alias={idea.submitterAlias} />{' '}
+            on {formatIdeaDateTime(idea.createdAt)} · {idea.categoryName}
           </p>
         </div>
         <StatusBadge status={idea.status} />
@@ -113,6 +118,17 @@ export function IdeaDetailPage(): JSX.Element {
               ) : null}
             </div>
           </Card>
+        </section>
+      ) : null}
+
+      {/* Phase 7 — reviewer scoring panel + aggregate (FR-008/FR-010). */}
+      <section className="mt-6">
+        <ScorePanel idea={idea} />
+      </section>
+
+      {idea.scores && idea.scores.count > 0 ? (
+        <section className="mt-6">
+          <ScoreAggregate aggregate={idea.scores} />
         </section>
       ) : null}
 

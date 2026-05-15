@@ -30,3 +30,6 @@ export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 
 export { LoadingSkeleton, Skeleton, Spinner } from './LoadingSkeleton';
+
+export { ScoreInput } from './ScoreInput';
+export type { ScoreInputProps } from './ScoreInput';

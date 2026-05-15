@@ -1,5 +1,8 @@
+using InnovatEpam.Portal.Application.Auth;
 using InnovatEpam.Portal.Application.Ideas.Dtos;
 using InnovatEpam.Portal.Application.Persistence;
+using InnovatEpam.Portal.Application.Scoring;
+using InnovatEpam.Portal.Application.Scoring.Dtos;
 using InnovatEpam.Portal.Domain.Enums;
 using InnovatEpam.Portal.Domain.Exceptions;
 using InnovatEpam.Portal.Domain.Ideas;
@@ -9,14 +12,20 @@ namespace InnovatEpam.Portal.Application.Ideas;
 
 /// <summary>
 /// Idea aggregate use-cases (T063): create, list, fetch (FR-009..014, FR-021).
+/// Phase 6 added admin-side identity redaction; Phase 7 added score aggregates
+/// + opt-in score sort on the list endpoint.
 /// </summary>
 public sealed class IdeaService
 {
     private readonly IPortalDbContext _db;
+    private readonly IAliasService _alias;
+    private readonly ScoringService _scoring;
 
-    public IdeaService(IPortalDbContext db)
+    public IdeaService(IPortalDbContext db, IAliasService alias, ScoringService scoring)
     {
         _db = db;
+        _alias = alias;
+        _scoring = scoring;
     }
 
     /// <summary>
@@ -42,15 +51,25 @@ public sealed class IdeaService
         _db.IdeaStatusHistory.Add(history);
         await _db.SaveChangesAsync(ct);
 
-        return await GetByIdAsync(idea.Id, ct);
+        return await GetByIdAsync(idea.Id, ct, callerId: submitterId, callerIsAdmin: false);
     }
 
-    /// <summary>Returns a single idea projection or throws <see cref="NotFoundException"/>.</summary>
-    public async Task<IdeaDetail> GetByIdAsync(Guid id, CancellationToken ct)
+    /// <summary>
+    /// Returns a single idea projection or throws <see cref="NotFoundException"/>.
+    /// Pass the caller's identity + role so Phase 6 redaction can be applied.
+    /// </summary>
+    public async Task<IdeaDetail> GetByIdAsync(
+        Guid id,
+        CancellationToken ct,
+        Guid? callerId = null,
+        bool callerIsAdmin = false)
     {
-        var detail = await BuildDetailQuery(_db.Ideas.AsNoTracking().Where(i => i.Id == id))
+        var raw = await BuildRawDetailQuery(_db.Ideas.AsNoTracking().Where(i => i.Id == id))
             .FirstOrDefaultAsync(ct);
-        return detail ?? throw new NotFoundException("Idea not found.");
+        if (raw is null) throw new NotFoundException("Idea not found.");
+
+        var scores = await _scoring.BuildAggregateAsync(id, ct);
+        return Project(raw, callerId, callerIsAdmin, scores);
     }
 
     /// <summary>
@@ -58,8 +77,9 @@ public sealed class IdeaService
     /// </summary>
     /// <remarks>
     /// <paramref name="sort"/> accepts <c>createdAt</c>, <c>-createdAt</c> (default),
-    /// <c>updatedAt</c>, <c>-updatedAt</c>, <c>title</c>, <c>-title</c>. Unknown values
-    /// fall back to the default to keep the index <c>ix_idea_status_created_at</c> hot.
+    /// <c>updatedAt</c>, <c>-updatedAt</c>, <c>title</c>, <c>-title</c>, plus the
+    /// Phase 7 additions <c>score:asc</c> / <c>score:desc</c> (FR-013). Unknown
+    /// values fall back to the default to keep the index <c>ix_idea_status_created_at</c> hot.
     /// </remarks>
     public async Task<PagedIdeas> ListAsync(
         IdeaStatus? status,
@@ -68,7 +88,9 @@ public sealed class IdeaService
         int page,
         int pageSize,
         CancellationToken ct,
-        string? sort = null)
+        string? sort = null,
+        Guid? callerId = null,
+        bool callerIsAdmin = false)
     {
         page = page < 1 ? 1 : page;
         pageSize = pageSize switch { < 1 => 10, > 100 => 100, _ => pageSize };
@@ -84,43 +106,110 @@ public sealed class IdeaService
 
         var total = await query.CountAsync(ct);
 
-        var ordered = ApplySort(query, sort);
+        // Phase 7 — apply sort on the source IQueryable<Idea> BEFORE projecting.
+        // EF Core 8 translates scalar subqueries inside OrderBy fine, but cannot
+        // trace member access through a complex record constructor in a later
+        // sort clause (it collapses `r => r.CreatedAt` into the whole `new
+        // ListRow(...)` expression and gives up).
+        var sorted = ApplySort(query, sort);
 
-        var slice = ordered
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize);
-
-        var items = await (
-            from i in slice
+        // Pre-aggregated per-idea score projection — single SQL pass, no N+1 (FR-014).
+        // Each AVG/COUNT is an inlined scalar subquery; nullable selectors map
+        // empty AVG()->NULL cleanly into `double?`. We deliberately do NOT
+        // bind the IdeaScores collection to a `let` symbol because EF Core 8
+        // refuses to compile queries whose final projection references an
+        // IQueryable<T> directly (it sees the symbol as a collection result).
+        var projected =
+            from i in sorted
             join c in _db.Categories on i.CategoryId equals c.Id
             join u in _db.Users on i.SubmitterId equals u.Id
-            select new IdeaListItem(
-                i.Id,
-                i.Title,
-                c.Id,
-                c.Name,
-                i.Status,
-                u.Id,
-                u.DisplayName,
+            select new ListRow(
+                i.Id, i.Title, c.Id, c.Name, i.Status, i.SubmitterId, u.DisplayName,
                 _db.Attachments.Any(a => a.IdeaId == i.Id),
-                i.CreatedAt,
-                i.UpdatedAt))
-            .ToListAsync(ct);
+                i.CreatedAt, i.UpdatedAt,
+                _db.Decisions
+                    .Where(d => d.IdeaId == i.Id)
+                    .OrderByDescending(d => d.DecidedAt)
+                    .Select(d => (DecisionAction?)d.Action)
+                    .FirstOrDefault(),
+                (_db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Impact)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Feasibility)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Innovation)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Alignment)) / 4d,
+                _db.IdeaScores.Count(s => s.IdeaId == i.Id));
+
+        var rows = await projected.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+
+        var items = rows.Select(p =>
+        {
+            var isBlind = ShouldHideIdentity(p.LastDecisionAction, p.SubmitterId, callerId, callerIsAdmin);
+            return new IdeaListItem(
+                p.Id,
+                p.Title,
+                p.CategoryId,
+                p.CategoryName,
+                p.Status,
+                p.SubmitterId,
+                isBlind ? null : p.SubmitterName,
+                p.HasAttachment,
+                p.CreatedAt,
+                p.UpdatedAt,
+                SubmitterAlias: isBlind ? _alias.SubmitterAlias(p.Id) : null,
+                Overall: p.Overall.HasValue ? Math.Round(p.Overall.Value, 2) : (double?)null,
+                ReviewerCount: p.ReviewerCount);
+        }).ToList();
 
         return new PagedIdeas(items, total, page, pageSize);
     }
 
-    private static IQueryable<Idea> ApplySort(IQueryable<Idea> query, string? sort) => sort switch
+    private IOrderedQueryable<Idea> ApplySort(IQueryable<Idea> query, string? sort) => sort switch
     {
         "createdAt" => query.OrderBy(i => i.CreatedAt),
         "updatedAt" => query.OrderBy(i => i.UpdatedAt),
         "-updatedAt" => query.OrderByDescending(i => i.UpdatedAt),
         "title" => query.OrderBy(i => i.Title),
         "-title" => query.OrderByDescending(i => i.Title),
+        // Phase 7 — NULLS LAST under both directions; tie-breaker = CreatedAt ASC.
+        "score:desc" => query
+            .OrderBy(i => !_db.IdeaScores.Any(s => s.IdeaId == i.Id))
+            .ThenByDescending(i =>
+                (_db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Impact)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Feasibility)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Innovation)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Alignment)) / 4d)
+            .ThenBy(i => i.CreatedAt),
+        "score:asc" => query
+            .OrderBy(i => !_db.IdeaScores.Any(s => s.IdeaId == i.Id))
+            .ThenBy(i =>
+                (_db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Impact)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Feasibility)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Innovation)
+                 + _db.IdeaScores.Where(s => s.IdeaId == i.Id).Average(s => (double?)s.Alignment)) / 4d)
+            .ThenBy(i => i.CreatedAt),
         _ => query.OrderByDescending(i => i.CreatedAt),
     };
 
-    private IQueryable<IdeaDetail> BuildDetailQuery(IQueryable<Idea> ideas) =>
+    /// <summary>Internal flat projection used between the SQL query and the materialized DTO.</summary>
+    private sealed record ListRow(
+        Guid Id,
+        string Title,
+        Guid CategoryId,
+        string CategoryName,
+        IdeaStatus Status,
+        Guid SubmitterId,
+        string SubmitterName,
+        bool HasAttachment,
+        DateTimeOffset CreatedAt,
+        DateTimeOffset UpdatedAt,
+        DecisionAction? LastDecisionAction,
+        double? Overall,
+        int ReviewerCount);
+
+    /// <summary>
+    /// Builds the un-redacted, score-less detail tuple. Identity redaction and
+    /// score aggregation are layered on top in <see cref="Project"/>.
+    /// </summary>
+    private IQueryable<RawIdeaDetail> BuildRawDetailQuery(IQueryable<Idea> ideas) =>
         from i in ideas
         join c in _db.Categories on i.CategoryId equals c.Id
         join u in _db.Users on i.SubmitterId equals u.Id
@@ -130,7 +219,7 @@ public sealed class IdeaService
             .OrderByDescending(d => d.DecidedAt)
             .FirstOrDefault()
         let lastDecider = lastDecision == null ? null : _db.Users.FirstOrDefault(x => x.Id == lastDecision.DecidedById)
-        select new IdeaDetail(
+        select new RawIdeaDetail(
             i.Id,
             i.Title,
             i.Description,
@@ -146,6 +235,64 @@ public sealed class IdeaService
             lastDecision == null ? (Guid?)null : lastDecision.DecidedById,
             lastDecider == null ? null : lastDecider.DisplayName,
             lastDecision == null ? (DateTimeOffset?)null : lastDecision.DecidedAt,
+            lastDecision == null ? (DecisionAction?)null : lastDecision.Action,
             i.CreatedAt,
             i.UpdatedAt);
+
+    private IdeaDetail Project(RawIdeaDetail raw, Guid? callerId, bool callerIsAdmin, IdeaScoreAggregateDto scores)
+    {
+        var isBlind = ShouldHideIdentity(raw.LastDecisionAction, raw.SubmitterId, callerId, callerIsAdmin);
+        return new IdeaDetail(
+            raw.Id,
+            raw.Title,
+            raw.Description,
+            raw.CategoryId,
+            raw.CategoryName,
+            raw.Status,
+            raw.SubmitterId,
+            isBlind ? null : raw.SubmitterName,
+            raw.Attachment,
+            raw.LastDecisionComment,
+            raw.LastDecisionById,
+            raw.LastDecisionByName,
+            raw.LastDecisionAt,
+            raw.CreatedAt,
+            raw.UpdatedAt,
+            SubmitterAlias: isBlind ? _alias.SubmitterAlias(raw.Id) : null,
+            Scores: scores);
+    }
+
+    /// <summary>
+    /// FR-001/FR-003: hide submitter identity iff (caller is admin) AND
+    /// (latest decision is not terminal) AND (caller is not the submitter
+    /// themselves — who always sees their own identity).
+    /// </summary>
+    internal static bool ShouldHideIdentity(
+        DecisionAction? latestDecision,
+        Guid submitterId,
+        Guid? callerId,
+        bool callerIsAdmin)
+    {
+        if (!callerIsAdmin) return false;
+        if (callerId is not null && callerId.Value == submitterId) return false;
+        return latestDecision is not (DecisionAction.Accept or DecisionAction.Reject);
+    }
+
+    private sealed record RawIdeaDetail(
+        Guid Id,
+        string Title,
+        string Description,
+        Guid CategoryId,
+        string CategoryName,
+        IdeaStatus Status,
+        Guid SubmitterId,
+        string SubmitterName,
+        AttachmentSummary? Attachment,
+        string? LastDecisionComment,
+        Guid? LastDecisionById,
+        string? LastDecisionByName,
+        DateTimeOffset? LastDecisionAt,
+        DecisionAction? LastDecisionAction,
+        DateTimeOffset CreatedAt,
+        DateTimeOffset UpdatedAt);
 }

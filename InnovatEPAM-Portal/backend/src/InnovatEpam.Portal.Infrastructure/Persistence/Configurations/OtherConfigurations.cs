@@ -24,6 +24,8 @@ internal sealed class DecisionConfiguration : IEntityTypeConfiguration<Decision>
         builder.Property(d => d.Comment).HasMaxLength(Decision.CommentMaxLength);
         builder.Property(d => d.DecidedById).IsRequired();
         builder.Property(d => d.DecidedAt).IsRequired();
+        // Phase 6 / FR-004 — audit fact: was the idea blind at the moment of decision?
+        builder.Property(d => d.WasBlind).HasDefaultValue(false).IsRequired();
 
         builder.HasIndex(d => new { d.IdeaId, d.DecidedAt })
             .HasDatabaseName("ix_decision_idea_id_decided_at");

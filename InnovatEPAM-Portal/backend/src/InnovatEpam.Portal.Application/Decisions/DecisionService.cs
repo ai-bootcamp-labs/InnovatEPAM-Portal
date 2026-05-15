@@ -75,7 +75,13 @@ public sealed class DecisionService
             throw;
         }
 
-        var decision = Decision.Create(idea.Id, request.Action, request.Comment, adminId, DateTimeOffset.UtcNow);
+        // Phase 6 / FR-004: capture whether blind-review mode was active at
+        // decision time so the audit trail stays honest even if blind mode is
+        // later disabled. Blind mode applies whenever the idea was not already
+        // terminal at the moment of decision (i.e. for the very first
+        // Accept/Reject — the call that *causes* identity to be revealed).
+        var wasBlind = fromStatus is not (IdeaStatus.Accepted or IdeaStatus.Rejected);
+        var decision = Decision.Create(idea.Id, request.Action, request.Comment, adminId, DateTimeOffset.UtcNow, wasBlind);
         _db.Decisions.Add(decision);
 
         // T102 — emit an in-portal notification for the submitter inside the
@@ -113,7 +119,7 @@ public sealed class DecisionService
         }
 
         _logger.LogInformation("decision.recorded {IdeaId} {Action} {AdminId}", ideaId, request.Action, adminId);
-        return await _ideas.GetByIdAsync(ideaId, ct);
+        return await _ideas.GetByIdAsync(ideaId, ct, callerId: adminId, callerIsAdmin: true);
     }
 
     public async Task<IReadOnlyList<StatusHistoryEntry>> GetHistoryAsync(Guid ideaId, CancellationToken ct)

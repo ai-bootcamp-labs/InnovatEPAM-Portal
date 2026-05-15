@@ -43,3 +43,11 @@ dotnet ef database update `
 
 See [../specs/001-phase1-mvp/quickstart.md](../specs/001-phase1-mvp/quickstart.md)
 for the full local-dev setup including Docker PostgreSQL.
+
+## Blind review configuration
+
+The alias service (spec `009-phase6-and-7`) derives reviewer / submitter aliases via HMAC-SHA256 keyed by the `BlindReview:AliasSalt` configuration value.
+
+- **Production deployments MUST set `BlindReview:AliasSalt` to a non-empty, high-entropy secret** (env var `BlindReview__AliasSalt` or a Key Vault binding). The shipped `appsettings.json` deliberately holds an empty string so missing configuration fails fast.
+- `appsettings.Development.json` ships a fixed development-only salt so local containers produce stable aliases across restarts.
+- Rotating the salt invalidates all previously computed aliases by design — historical badges in the UI will change. Plan rotations during a maintenance window.

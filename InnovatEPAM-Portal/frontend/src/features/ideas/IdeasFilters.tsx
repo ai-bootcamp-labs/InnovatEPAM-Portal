@@ -10,6 +10,8 @@ const SORT_OPTIONS: { value: IdeaSort; label: string }[] = [
   { value: '-updatedAt', label: 'Recently updated' },
   { value: 'title', label: 'Title (A→Z)' },
   { value: '-title', label: 'Title (Z→A)' },
+  { value: 'score:desc', label: 'Highest score' },
+  { value: 'score:asc', label: 'Lowest score' },
 ];
 
 const SORT_VALUES = new Set<IdeaSort>(SORT_OPTIONS.map((o) => o.value));

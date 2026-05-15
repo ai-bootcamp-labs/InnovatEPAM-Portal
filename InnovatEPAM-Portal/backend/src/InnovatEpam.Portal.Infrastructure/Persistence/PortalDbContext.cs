@@ -6,6 +6,7 @@ using InnovatEpam.Portal.Domain.Ideas;
 using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Domain.Notifications;
 using InnovatEpam.Portal.Domain.Outbox;
+using InnovatEpam.Portal.Domain.Scoring;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,7 @@ public class PortalDbContext : IdentityDbContext<AppUser, AppRole, Guid>, IPorta
     public DbSet<Decision> Decisions => Set<Decision>();
     public DbSet<IdeaStatusHistory> IdeaStatusHistory => Set<IdeaStatusHistory>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<IdeaScore> IdeaScores => Set<IdeaScore>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     public PortalDbContext(DbContextOptions<PortalDbContext> options) : base(options)

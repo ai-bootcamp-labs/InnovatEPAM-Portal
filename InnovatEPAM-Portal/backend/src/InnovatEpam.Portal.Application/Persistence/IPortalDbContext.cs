@@ -4,6 +4,7 @@ using InnovatEpam.Portal.Domain.Decisions;
 using InnovatEpam.Portal.Domain.Ideas;
 using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Domain.Notifications;
+using InnovatEpam.Portal.Domain.Scoring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
@@ -23,6 +24,7 @@ public interface IPortalDbContext
     DbSet<Decision> Decisions { get; }
     DbSet<IdeaStatusHistory> IdeaStatusHistory { get; }
     DbSet<Notification> Notifications { get; }
+    DbSet<IdeaScore> IdeaScores { get; }
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken ct);
 }

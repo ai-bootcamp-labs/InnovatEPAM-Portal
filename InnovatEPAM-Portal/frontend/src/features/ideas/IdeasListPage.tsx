@@ -7,6 +7,7 @@ import { Container } from '@/components/layout/Container';
 import { Button, Card, EmptyState, LoadingSkeleton, StatusBadge } from '@/components/ui';
 import { cn } from '@/lib/ui/cn';
 import { formatIdeaDate } from '@/lib/date';
+import { SubmitterLabel } from '@/features/ideas/SubmitterLabel';
 
 /** Idea list view (T075, refactored in T097–T099). URL is the single source of truth. */
 export function IdeasListPage(): JSX.Element {
@@ -116,13 +117,32 @@ export function IdeasListPage(): JSX.Element {
                           <span aria-hidden="true">·</span>
                           <div className="flex items-center gap-1">
                             <dt className="sr-only">Submitter</dt>
-                            <dd>{idea.submitterName}</dd>
+                            <dd>
+                              <SubmitterLabel
+                                name={idea.submitterName}
+                                alias={idea.submitterAlias}
+                              />
+                            </dd>
                           </div>
                           <span aria-hidden="true">·</span>
                           <div className="flex items-center gap-1">
                             <dt className="sr-only">Submitted</dt>
                             <dd>{formatIdeaDate(idea.createdAt)}</dd>
                           </div>
+                          {idea.reviewerCount > 0 ? (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <div className="flex items-center gap-1" data-testid="idea-score">
+                                <dt className="sr-only">Score</dt>
+                                <dd className="tabular-nums">
+                                  <span className="font-semibold text-foreground">
+                                    {(idea.overall ?? 0).toFixed(2)}
+                                  </span>{' '}
+                                  ({idea.reviewerCount})
+                                </dd>
+                              </div>
+                            </>
+                          ) : null}
                         </dl>
                       </div>
                       <div className="flex-shrink-0">

@@ -10,6 +10,7 @@ using InnovatEpam.Portal.Application.Auth;
 using InnovatEpam.Portal.Application.Decisions;
 using InnovatEpam.Portal.Application.Ideas;
 using InnovatEpam.Portal.Application.Persistence;
+using InnovatEpam.Portal.Application.Scoring;
 using InnovatEpam.Portal.Application.Storage;
 using InnovatEpam.Portal.Domain.Identity;
 using InnovatEpam.Portal.Infrastructure.Persistence;
@@ -134,10 +135,12 @@ builder.Services.AddSingleton<IAttachmentStorage, FileSystemAttachmentStorage>()
 // ─── Application services (T062-T064) ────────────────────────────────────────
 builder.Services.AddScoped<IPortalDbContext>(sp => sp.GetRequiredService<PortalDbContext>());
 builder.Services.AddSingleton<IJwtTokenIssuer, JwtTokenIssuer>();
+builder.Services.AddSingleton<IAliasService, AliasService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IdeaService>();
 builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<DecisionService>();
+builder.Services.AddScoped<ScoringService>();
 builder.Services.AddScoped<InnovatEpam.Portal.Application.Notifications.NotificationService>();
 
 // ─── Health checks (T108) ────────────────────────────────────────────────────────────
