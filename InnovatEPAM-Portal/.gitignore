@@ -10,6 +10,7 @@ obj/
 TestResults/
 **/Properties/launchSettings.local.json
 *.binlog
+*.lscache
 
 # --- Node.js ---
 node_modules/
