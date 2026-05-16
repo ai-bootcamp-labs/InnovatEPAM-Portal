@@ -47,7 +47,7 @@ end-to-end from a single `docker compose up --build` command.
   pages and sortable via `sort=score:desc|asc`. Self-scoring is forbidden
   (409 `SelfScoringForbidden`); scoring is closed once an idea is decided
   (409 `ScoringClosed`).
-- [x] **Phase 9** — UI polish & docs: shared primitives section added to the
+- [x] **Phase 8** — UI polish & docs: shared primitives section added to the
   root README; reviewer checklist consolidated; project documentation
   finalised.
 
@@ -94,4 +94,4 @@ end-to-end from a single `docker compose up --build` command.
 
 **Submitted by:** Ozan Ergüleç
 **Date:** May 15, 2026
-**Cohort:** EPAM AI Bootcamp A201
+
